@@ -63,14 +63,20 @@ class Player:
         screen.blit(player_image, camera.apply(self))
 
     def move(self, keys, camera):
+        dx = dy = 0
         if keys[pygame.K_a]:
-            self.x = max(0, self.x - self.speed)
+            dx = -self.speed
         if keys[pygame.K_d]:
-            self.x = min(camera.width - self.width, self.x + self.speed)
+            dx = self.speed
         if keys[pygame.K_w]:
-            self.y = max(0, self.y - self.speed)
+            dy = -self.speed
         if keys[pygame.K_s]:
-            self.y = min(camera.height - self.height, self.y + self.speed)
+            dy = self.speed
+
+        # Check collision before actual move
+        if check_collision(self.x + dx, self.y + dy):
+            self.x += dx
+            self.y += dy
 
         self.rect.x = self.x
         self.rect.y = self.y
@@ -147,6 +153,28 @@ def main_menu():
         pygame.time.Clock().tick(60)
 
 
+def check_collision(x, y):
+    try:
+        # Convert the floating point x and y to integers for pixel checking
+        int_x = int(x)
+        int_y = int(y)
+        # Get the color of the pixel at the (x, y) position of the collision map
+        pixel_color = collision_map.get_at((int_x, int_y))
+
+        # Extract the RGB components of the pixel color
+        red, green, blue = pixel_color[:3]
+
+        # Define the color that represents collidable areas (e.g., white)
+        collidable_color = (255, 255, 255)
+
+        # Check if the pixel color matches the collidable color
+        is_colliding = (red, green, blue) == collidable_color
+
+        return is_colliding
+    except IndexError as i:
+        return False
+
+
 def handle_events(player, bullets, camera):
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -192,26 +220,6 @@ def get_image_dimensions(image_path):
     with Image.open(image_path) as img:
         width, height = img.size
     return width, height
-
-
-def check_collision(x, y):
-    # Convert the floating point x and y to integers for pixel checking
-    int_x = int(x)
-    int_y = int(y)
-
-    # Get the color of the pixel at the (x, y) position of the collision map
-    pixel_color = collision_map.get_at((int_x, int_y))
-
-    # Extract the RGB components of the pixel color
-    red, green, blue = pixel_color[:3]
-
-    # Define the color that represents collidable areas (e.g., white)
-    collidable_color = (255, 255, 255)
-
-    # Check if the pixel color matches the collidable color
-    is_colliding = (red, green, blue) == collidable_color
-
-    return is_colliding
 
 
 def game_loop():
