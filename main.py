@@ -16,6 +16,7 @@ player_image_path = r'Images/MiniGoose.png'
 target_image_path = r'Images/target.png'
 map_image_path = r'Images/GooseMapBig.jpg'
 collision_image_path = r'Images/CollisionMap.jpg'
+sprite_sheet_path = r'Images/Walk.png'
 
 # Load images
 player_image = pygame.image.load(player_image_path).convert_alpha()
@@ -51,27 +52,56 @@ class Camera:
 
 
 class Player:
-    def __init__(self, x, y, width, height, speed):
+    def __init__(self, x, y, width, height, speed, sprite_sheet_path):
         self.x = x
         self.y = y
         self.width = width
         self.height = height
         self.speed = speed
         self.rect = pygame.Rect(x, y, width, height)
+        self.direction = 'down'  # Initial direction
+        self.anim_frame = 0
+        self.anim_speed = 10  # Number of frames to wait before switching animation frames
+        self.anim_count = 0  # Counter to track animation speed
+        self.sprites = {}  # Initialize the sprites dictionary
+        self.load_sprites(sprite_sheet_path)
+
+    def load_sprites(self, sprite_sheet_path):
+        sprite_sheet = pygame.image.load(sprite_sheet_path).convert_alpha()
+        directions = ['down', 'up', 'left', 'right']  # Assuming this order in columns
+        self.sprites = {direction: [] for direction in directions}
+        for col, direction in enumerate(directions):
+            for row in range(4):  # Assuming 4 frames per direction
+                frame = sprite_sheet.subsurface(col * self.width, row * self.height, self.width, self.height)
+                self.sprites[direction].append(frame)
 
     def draw(self, camera):
-        screen.blit(player_image, camera.apply(self))
+        frame = self.sprites[self.direction][self.anim_frame]
+        screen.blit(frame, camera.apply(self))
 
     def move(self, keys, camera):
         dx = dy = 0
         if keys[pygame.K_a]:
             dx = -self.speed
+            self.direction = 'left'
         if keys[pygame.K_d]:
             dx = self.speed
+            self.direction = 'right'
         if keys[pygame.K_w]:
             dy = -self.speed
+            self.direction = 'up'
         if keys[pygame.K_s]:
             dy = self.speed
+            self.direction = 'down'
+
+        if dx != 0 or dy != 0:
+            self.anim_count += 1
+            if self.anim_count >= self.anim_speed:
+                self.anim_frame = (self.anim_frame + 1) % 4
+                self.anim_count = 0  # Reset counter after updating frame
+        else:
+            self.anim_frame = 0  # Reset to first frame if not moving
+            self.anim_count = 0  # Reset counter when player stops
 
         # Check collision before actual move
         if check_collision(self.x + dx, self.y + dy):
@@ -170,7 +200,18 @@ class Game:
         self.targets = [Target(100, 100), Target(350, 200), Target(600, 150)]
         self.map_width, self.map_height = get_image_dimensions(map_image_path)
         self.camera = Camera(self.map_width, self.map_height)
-        self.player = Player(screen_width // 2, screen_height - 40 - player_height // 2, player_width, player_height, player_speed)
+
+        with Image.open(sprite_sheet_path) as img:
+            frame_width, frame_height = img.size[0] // 4, img.size[1] // 4  # Assuming 4 frames per direction
+
+        self.player = Player(
+            x=screen_width // 2,
+            y=screen_height - 40 - frame_height // 2,
+            width=frame_width,
+            height=frame_height,
+            speed=player_speed,
+            sprite_sheet_path=sprite_sheet_path
+        )
 
     def run(self):
         running = True
@@ -250,11 +291,7 @@ def check_collision(x, y):
 if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode((screen_width, screen_height))
-    pygame.display.set_caption("Tank Game")
-
-    # Initialize player and target images and get dimensions
-    player_image = pygame.image.load(player_image_path).convert_alpha()
-    player_width, player_height = player_image.get_size()
+    pygame.display.set_caption("Ninja Game")
 
     menu = Menu(screen)
     menu.display_main_menu()
