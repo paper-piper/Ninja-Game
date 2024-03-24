@@ -2,6 +2,7 @@ import pygame
 import math
 from PIL import Image
 import random
+import math
 
 # Initialize Pygame
 pygame.init()
@@ -53,7 +54,7 @@ class Camera:
 
 
 class Player:
-    def __init__(self, x, y, width, height, speed, sprite_sheet_path):
+    def __init__(self, x, y, width, height, speed):
         self.x = x
         self.y = y
         self.width = width
@@ -138,42 +139,67 @@ class Player:
 
 
 class AIPlayer(Player):
-    def __init__(self, x, y, width, height, speed, sprite_sheet_path):
-        super().__init__(x, y, width, height, speed, sprite_sheet_path)
+    def __init__(self, x, y, width, height, speed, target_player):
+        super().__init__(x, y, width, height, speed)
+        self.target_player = target_player
+        self.shoot_distance = 250  # Distance at which AI starts shooting
 
-    def move(self, keys, camera):
-        directions = ['left', 'right', 'up', 'down']
-        self.direction = random.choice(directions)
-        dx = dy = 0
+    def move(self, camera):
+        dx, dy = 0, 0
 
-        if self.direction == 'left':
-            dx = -self.speed
-        elif self.direction == 'right':
-            dx = self.speed
-        elif self.direction == 'up':
-            dy = -self.speed
-        elif self.direction == 'down':
-            dy = self.speed
+        # Calculate distance to the target player
+        distance_x = self.target_player.x - self.x
+        distance_y = self.target_player.y - self.y
+        distance = math.hypot(distance_x, distance_y)
 
-        if dx != 0 or dy != 0:
-            self.anim_count += 1
-            if self.anim_count >= self.anim_speed:
-                self.anim_frame = (self.anim_frame + 1) % 4
-                self.anim_count = 0
+        # Move towards or away from the player to maintain a strategic distance
+        if distance > self.shoot_distance:
+            dx = self.speed if distance_x > 0 else -self.speed
+            dy = self.speed if distance_y > 0 else -self.speed
+        elif distance < self.shoot_distance - 50:  # Buffer for too close
+            dx = -self.speed if distance_x > 0 else self.speed
+            dy = -self.speed if distance_y > 0 else self.speed
+
+        # Randomly avoid getting hit (simple dodge behavior)
+        if random.random() < 0.1:
+            dx = -dx
+            dy = -dy
+
+        # Update the direction based on movement
+        if abs(distance_x) > abs(distance_y):
+            self.direction = 'right' if dx > 0 else 'left'
         else:
-            self.anim_frame = 0
-            self.anim_count = 0
+            self.direction = 'up' if dy < 0 else 'down'
 
-        if check_collision(self.x + dx, self.y + dy, self.width, self.height):
-            self.x += dx
-            self.y += dy
+        # Update position and animation
+        if dx != 0 or dy != 0:
+            if check_collision(self.x + dx, self.y + dy, self.width, self.height):
+                self.x += dx
+                self.y += dy
+            self.update_animation()
 
         self.rect.x = self.x
         self.rect.y = self.y
 
+    def update_animation(self):
+        self.anim_count += 1
+        if self.anim_count >= self.anim_speed:
+            self.anim_frame = (self.anim_frame + 1) % 4
+            self.anim_count = 0
+        else:
+            self.anim_frame = 0
+            self.anim_count = 0
+
+    def shoot_at_player(self, camera, bullets):
+        if math.hypot(self.target_player.x - self.x, self.target_player.y - self.y) <= self.shoot_distance:
+            angle = math.atan2(self.target_player.y - self.y, self.target_player.x - self.x)
+            dx = math.cos(angle) * 10
+            dy = math.sin(angle) * 10
+            bullets.append(Bullet(self.x + self.width // 2, self.y + self.height // 2, dx, dy, 3))
+
     def random_action(self, camera, bullets):
-        if random.random() < 0.01:  # Small chance to shoot
-            self.shoot(camera, bullets)
+        if random.random() < 0.05:  # Chance to shoot at player
+            self.shoot_at_player(camera, bullets)
 
 
 class Bullet:
@@ -250,7 +276,6 @@ class Game:
             width=frame_width,
             height=frame_height,
             speed=player_speed,
-            sprite_sheet_path=sprite_sheet_path
         )
 
         self.ai_player = AIPlayer(
@@ -259,7 +284,7 @@ class Game:
             width=frame_width,
             height=frame_height,
             speed=player_speed,
-            sprite_sheet_path=sprite_sheet_path
+            target_player=self.player
         )
 
     def run(self):
@@ -283,8 +308,8 @@ class Game:
 
     def update_game_objects(self, keys):
         self.player.move(keys, self.camera)
-        self.ai_player.move(keys, self.camera)  # AI player moves randomly
-        self.ai_player.random_action(self.camera, self.bullets)  # AI player may randomly shoot
+        self.ai_player.move(self.camera)
+        self.ai_player.random_action(self.camera, self.bullets)
         self.camera.update(self.player)
         for bullet in self.bullets[:]:
             if bullet.move():
