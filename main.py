@@ -14,11 +14,11 @@ screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Tank Game")
 
 # Images paths
-player_image_path = r'Images/Players/MiniGoose.png'
+player_image_path = r'Images/Characters/MiniGoose.png'
 target_image_path = r'Images/target.png'
 map_image_path = r'Images/Map/detailedMap.png'
 collision_image_path = r'Images/Map/CollisionMap.jpg'
-sprite_sheet_path = r'Images/Players/Walk.png'
+sprite_sheet_path = r'Images/Characters/Walk.png'
 
 # Load images
 player_image = pygame.image.load(player_image_path).convert_alpha()
@@ -32,27 +32,28 @@ player_speed = 4
 
 
 class Character:
-    def __init__(self, name, hp, speed, bullet_speed, bullet_image, sprite_sheet_path, faceset):
+    def __init__(self, name, hp, speed, bullet_speed, bullet_image):
         self.name = name
         self.hp = hp
         self.speed = speed
         self.bullet_speed = bullet_speed
         self.bullet_image = bullet_image
-        self.sprite_sheet_path = sprite_sheet_path
-        self.faceset = faceset
+        self.sprites = self.load_sprites(name)
+        self.faceset = pygame.image.load(f'Characters/{name}/Faceset.png').convert_alpha()
 
-    def load_sprites(self):
-        sprite_sheet = pygame.image.load(self.sprite_sheet_path).convert_alpha()
-        self.sprites = {
+    def load_sprites(self, name):
+        sprite_sheet = pygame.image.load(f'Characters/{name}/SeparateAnim/Walk.png').convert_alpha()
+        sprites = {
             'down': [],
             'up': [],
             'left': [],
             'right': []
         }
-        for col, direction in enumerate(self.sprites.keys()):
-            for row in range(4):  # Assume 4 frames per direction
+        for col, direction in enumerate(sprites.keys()):
+            for row in range(4):  # Assuming 4 frames per direction
                 frame = sprite_sheet.subsurface(col * 64, row * 64, 64, 64)
-                self.sprites[direction].append(frame)
+                sprites[direction].append(frame)
+        return sprites
 
 
 class Camera:
@@ -78,7 +79,7 @@ class Camera:
 
 
 class Player:
-    def __init__(self, x, y, width, height, character):
+    def __init__(self, character, x, y, width, height):
         # game qualities
         self.x = x
         self.y = y
@@ -176,8 +177,8 @@ class Player:
 
 
 class AIPlayer(Player):
-    def __init__(self, x, y, width, height, speed, target_player):
-        super().__init__(x, y, width, height, speed)
+    def __init__(self, character, x, y, width, height, target_player):
+        super().__init__(character, x, y, width, height)
         self.target_player = target_player
         self.shoot_distance = 250  # Distance at which AI starts shooting
 
@@ -308,28 +309,31 @@ class Menu:
 class Game:
     def __init__(self, screen):
         self.screen = screen
-        self.bullets = []
-        self.targets = [Target(100, 100), Target(350, 200), Target(600, 150)]
         self.map_width, self.map_height = get_image_dimensions(map_image_path)
         self.camera = Camera(self.map_width, self.map_height)
 
-        with Image.open(sprite_sheet_path) as img:
-            frame_width, frame_height = img.size[0] // 4, img.size[1] // 4  # Assuming 4 frames per direction
+        # Character selection (pseudo-code)
+        chosen_character_name = "DarkNinja"  # Example character selection
+        character_stats = {"hp": 100, "speed": 4, "bullet_speed": 10}  # Example stats
+        character = Character(chosen_character_name, **character_stats)
 
         self.player = Player(
+            character,
             x=screen_width // 2,
-            y=screen_height - 40 - frame_height // 2,
-            width=frame_width,
-            height=frame_height,
-            speed=player_speed,
+            y=screen_height - 40 - 64 // 2,  # Assume 64x64 character size
+            width=64,
+            height=64
         )
 
+        # AI player setup
+        ai_character_name = "Eskimo"  # Example AI character selection
+        ai_character = Character(ai_character_name, **character_stats)  # AI character might have different stats
         self.ai_player = AIPlayer(
+            ai_character,
             x=screen_width // 4,
-            y=screen_height - 40 - frame_height // 2,
-            width=frame_width,
-            height=frame_height,
-            speed=player_speed,
+            y=screen_height - 40 - 64 // 2,
+            width=64,
+            height=64,
             target_player=self.player
         )
 
@@ -396,8 +400,6 @@ class Game:
             bullet.draw(self.camera)
         for bullet in self.ai_player.bullets:
             bullet.draw(self.camera)
-        for target in self.targets:
-            target.draw(self.camera)
 
 
 def display_end_screen(result):
@@ -425,8 +427,6 @@ def load_characters(file_path):
             speed=char_data['speed'],
             bullet_speed=char_data['bullet_speed'],
             bullet_image=char_data['bullet_image'],
-            sprite_sheet_path=char_data['sprite_sheet_path'],
-            faceset=char_data['faceset']
         )
         characters.append(character)
 
