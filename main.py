@@ -1,5 +1,4 @@
 import pygame
-import math
 from PIL import Image
 import random
 import math
@@ -60,11 +59,14 @@ class Player:
         self.width = width
         self.height = height
         self.speed = speed
+        self.hp = 100  # Starting HP
+        self.bullets = []  # Store bullets for each player
         self.rect = pygame.Rect(x, y, width, height)
         self.direction = 'down'  # Initial direction
         self.anim_frame = 0
         self.anim_speed = 10  # Number of frames to wait before switching animation frames
         self.anim_count = 0  # Counter to track animation speed
+        self.bullet_speed = 10
         self.sprites = {}  # Initialize the sprites dictionary
         self.load_sprites()
 
@@ -113,7 +115,7 @@ class Player:
         self.rect.x = self.x
         self.rect.y = self.y
 
-    def shoot(self, camera, bullets):
+    def shoot(self, camera):
         # Get the mouse position on the screen
         mx, my = pygame.mouse.get_pos()
 
@@ -131,11 +133,17 @@ class Player:
         angle = math.atan2(world_my - center_y, world_mx - center_x)
 
         # Calculate the bullet's direction vector based on the angle
-        dx = math.cos(angle) * 10  # Speed of the bullet
-        dy = math.sin(angle) * 10  # Speed of the bullet
+        dx = math.cos(angle) * self.bullet_speed  # Speed of the bullet
+        dy = math.sin(angle) * self.bullet_speed  # Speed of the bullet
 
         # Create and add the new bullet to the bullets list
-        bullets.append(Bullet(center_x, center_y, dx, dy, 3))
+        self.bullets.append(Bullet(center_x, center_y, dx, dy, 3, self))
+
+    def take_damage(self, damage):
+        self.hp -= damage
+        if self.hp <= 0:
+            self.hp = 0
+            # Handle player death here if needed
 
 
 class AIPlayer(Player):
@@ -190,26 +198,30 @@ class AIPlayer(Player):
             self.anim_frame = 0
             self.anim_count = 0
 
-    def shoot_at_player(self, camera, bullets):
+    def shoot_at_player(self):
         if math.hypot(self.target_player.x - self.x, self.target_player.y - self.y) <= self.shoot_distance:
             angle = math.atan2(self.target_player.y - self.y, self.target_player.x - self.x)
-            dx = math.cos(angle) * 10
-            dy = math.sin(angle) * 10
-            bullets.append(Bullet(self.x + self.width // 2, self.y + self.height // 2, dx, dy, 3))
+            dx = math.cos(angle) * self.bullet_speed
+            dy = math.sin(angle) * self.bullet_speed
+            self.bullets.append(Bullet(self.x + self.width // 2, self.y + self.height // 2, dx, dy, 3, self))
 
     def random_action(self, camera, bullets):
         if random.random() < 0.05:  # Chance to shoot at player
-            self.shoot_at_player(camera, bullets)
+            self.shoot_at_player()
 
 
 class Bullet:
-    def __init__(self, x, y, dx, dy, radius):
+    def __init__(self, x, y, dx, dy, radius, owner, image=None):
         self.x = x
         self.y = y
         self.dx = dx
         self.dy = dy
         self.radius = radius
+        self.owner = owner
+        self.image = image or pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
+        pygame.draw.circle(self.image, (0, 0, 0), (radius, radius), radius)
         self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
+
 
     def move(self):
         if check_collision(int(self.x + self.dx), int(self.y + self.dy), int(self.radius), int(self.radius)):
@@ -222,7 +234,10 @@ class Bullet:
         return False
 
     def draw(self, camera):
-        pygame.draw.circle(screen, (0, 0, 0), camera.apply(self).center, self.radius)
+        if self.image:
+            screen.blit(self.image, camera.apply(self).topleft)
+        else:
+            pygame.draw.circle(screen, (0, 0, 0), camera.apply(self).center, self.radius)
 
 
 class Target:
@@ -252,7 +267,7 @@ class Menu:
                     if event.key == pygame.K_RETURN:
                         menu = False
             self.screen.fill((255, 255, 255))
-            font = pygame.font.SysFont(None, 48)
+            font = pygame.font.SysFont("Arial", 48)
             text = font.render("Press Enter to Start", True, (0, 0, 0))
             self.screen.blit(text, (self.screen_width // 2 - text.get_width() // 2, self.screen_height // 2 - text.get_height() // 2))
             pygame.display.flip()
@@ -303,35 +318,64 @@ class Game:
             if event.type == pygame.QUIT:
                 return False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                self.player.shoot(self.camera, self.bullets)
+                self.player.shoot(self.camera)
         return True
 
     def update_game_objects(self, keys):
         self.player.move(keys, self.camera)
         self.ai_player.move(self.camera)
         self.ai_player.random_action(self.camera, self.bullets)
+
+        # Update each player's bullets separately
+        self.update_bullets(self.player.bullets)
+        self.update_bullets(self.ai_player.bullets)
+
         self.camera.update(self.player)
-        for bullet in self.bullets[:]:
+
+    def update_bullets(self, bullets):
+        for bullet in bullets[:]:
             if bullet.move():
-                self.bullets.remove(bullet)  # remove collided bullets
+                bullets.remove(bullet)
             elif bullet.x < 0 or bullet.x > self.camera.width or bullet.y < 0 or bullet.y > self.camera.height:
-                self.bullets.remove(bullet)  # remove off-screen bullets
+                bullets.remove(bullet)
 
     def check_collisions(self):
-        for target in self.targets[:]:
-            target_rect = pygame.Rect(target.x, target.y, target_image.get_width(), target_image.get_height())
-            for bullet in self.bullets:
-                if target_rect.collidepoint(bullet.x, bullet.y):
-                    self.targets.remove(target)
-                    self.bullets.remove(bullet)
-                    break
+        for bullet in self.player.bullets[:]:
+            if bullet.owner != self.ai_player and self.ai_player.rect.collidepoint(bullet.x, bullet.y):
+                self.ai_player.take_damage(10)
+                self.player.bullets.remove(bullet)
+
+        for bullet in self.ai_player.bullets[:]:
+            if bullet.owner != self.player and self.player.rect.collidepoint(bullet.x, bullet.y):
+                self.player.take_damage(10)
+                self.ai_player.bullets.remove(bullet)
+
+            # Check for win/lose conditions
+        if self.player.hp == 0:
+            self.display_end_screen("Lose")
+        elif self.ai_player.hp == 0:
+            self.display_end_screen("Win")
+
+    def display_end_screen(self, result):
+        font = pygame.font.SysFont(None, 48)
+        if result == "Win":
+            message = "You Win!"
+        else:
+            message = "You Lose!"
+        text = font.render(message, True, (0, 0, 0))
+        screen.fill((255, 255, 255))
+        screen.blit(text, (screen_width // 2 - text.get_width() // 2, screen_height // 2 - text.get_height() // 2))
+        pygame.display.flip()
+        pygame.time.wait(3000)  # Wait 3 seconds before closing or restarting the game
 
     def draw_game_objects(self):
         self.screen.fill((255, 255, 255))
         self.screen.blit(map_image, (self.camera.camera.x, self.camera.camera.y))
         self.player.draw(self.camera)
         self.ai_player.draw(self.camera)  # Draw AI player
-        for bullet in self.bullets:
+        for bullet in self.player.bullets:
+            bullet.draw(self.camera)
+        for bullet in self.ai_player.bullets:
             bullet.draw(self.camera)
         for target in self.targets:
             target.draw(self.camera)
