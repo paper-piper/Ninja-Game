@@ -2,6 +2,7 @@ import pygame
 from PIL import Image
 import random
 import math
+import json
 
 # Initialize Pygame
 pygame.init()
@@ -30,6 +31,30 @@ collision_map = pygame.image.load(collision_image_path).convert_alpha()
 player_speed = 4
 
 
+class Character:
+    def __init__(self, name, hp, speed, bullet_speed, bullet_image, sprite_sheet_path, faceset):
+        self.name = name
+        self.hp = hp
+        self.speed = speed
+        self.bullet_speed = bullet_speed
+        self.bullet_image = bullet_image
+        self.sprite_sheet_path = sprite_sheet_path
+        self.faceset = faceset
+
+    def load_sprites(self):
+        sprite_sheet = pygame.image.load(self.sprite_sheet_path).convert_alpha()
+        self.sprites = {
+            'down': [],
+            'up': [],
+            'left': [],
+            'right': []
+        }
+        for col, direction in enumerate(self.sprites.keys()):
+            for row in range(4):  # Assume 4 frames per direction
+                frame = sprite_sheet.subsurface(col * 64, row * 64, 64, 64)
+                self.sprites[direction].append(frame)
+
+
 class Camera:
     def __init__(self, width, height):
         self.camera = pygame.Rect(0, 0, width, height)
@@ -53,22 +78,26 @@ class Camera:
 
 
 class Player:
-    def __init__(self, x, y, width, height, speed):
+    def __init__(self, x, y, width, height, character):
+        # game qualities
         self.x = x
         self.y = y
         self.width = width
         self.height = height
-        self.speed = speed
-        self.hp = 100  # Starting HP
+
+        # default qualities
         self.bullets = []  # Store bullets for each player
         self.rect = pygame.Rect(x, y, width, height)
         self.direction = 'down'  # Initial direction
         self.anim_frame = 0
         self.anim_speed = 10  # Number of frames to wait before switching animation frames
         self.anim_count = 0  # Counter to track animation speed
-        self.bullet_speed = 10
-        self.sprites = {}  # Initialize the sprites dictionary
-        self.load_sprites()
+
+        # character qualities
+        self.speed = character.speed
+        self.hp = character.hp
+        self.bullet_speed = character.bullet_speed
+        self.sprites = character.load_sprites()
 
     def load_sprites(self):
         sprite_sheet = pygame.image.load(sprite_sheet_path).convert_alpha()
@@ -205,8 +234,8 @@ class AIPlayer(Player):
             dy = math.sin(angle) * self.bullet_speed
             self.bullets.append(Bullet(self.x + self.width // 2, self.y + self.height // 2, dx, dy, 3, self))
 
-    def random_action(self, camera, bullets):
-        if random.random() < 0.05:  # Chance to shoot at player
+    def random_action(self):
+        if random.random() < 0.02:  # Chance to shoot at player
             self.shoot_at_player()
 
 
@@ -221,7 +250,6 @@ class Bullet:
         self.image = image or pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
         pygame.draw.circle(self.image, (0, 0, 0), (radius, radius), radius)
         self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
-
 
     def move(self):
         if check_collision(int(self.x + self.dx), int(self.y + self.dy), int(self.radius), int(self.radius)):
@@ -257,19 +285,22 @@ class Menu:
         self.screen_height = screen.get_height()
 
     def display_main_menu(self):
-        menu = True
-        while menu:
+        continue_menu = True
+        while continue_menu:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     quit()
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
-                        menu = False
+                        continue_menu = False
             self.screen.fill((255, 255, 255))
             font = pygame.font.SysFont("Arial", 48)
             text = font.render("Press Enter to Start", True, (0, 0, 0))
-            self.screen.blit(text, (self.screen_width // 2 - text.get_width() // 2, self.screen_height // 2 - text.get_height() // 2))
+            self.screen.blit(
+                text,
+                (self.screen_width // 2 - text.get_width() // 2, self.screen_height // 2 - text.get_height() // 2)
+            )
             pygame.display.flip()
             pygame.time.Clock().tick(60)
 
@@ -324,7 +355,7 @@ class Game:
     def update_game_objects(self, keys):
         self.player.move(keys, self.camera)
         self.ai_player.move(self.camera)
-        self.ai_player.random_action(self.camera, self.bullets)
+        self.ai_player.random_action()
 
         # Update each player's bullets separately
         self.update_bullets(self.player.bullets)
@@ -352,21 +383,9 @@ class Game:
 
             # Check for win/lose conditions
         if self.player.hp == 0:
-            self.display_end_screen("Lose")
+            display_end_screen("Lose")
         elif self.ai_player.hp == 0:
-            self.display_end_screen("Win")
-
-    def display_end_screen(self, result):
-        font = pygame.font.SysFont(None, 48)
-        if result == "Win":
-            message = "You Win!"
-        else:
-            message = "You Lose!"
-        text = font.render(message, True, (0, 0, 0))
-        screen.fill((255, 255, 255))
-        screen.blit(text, (screen_width // 2 - text.get_width() // 2, screen_height // 2 - text.get_height() // 2))
-        pygame.display.flip()
-        pygame.time.wait(3000)  # Wait 3 seconds before closing or restarting the game
+            display_end_screen("Win")
 
     def draw_game_objects(self):
         self.screen.fill((255, 255, 255))
@@ -379,6 +398,39 @@ class Game:
             bullet.draw(self.camera)
         for target in self.targets:
             target.draw(self.camera)
+
+
+def display_end_screen(result):
+    font = pygame.font.SysFont("Arial", 48)
+    if result == "Win":
+        message = "You Win!"
+    else:
+        message = "You Lose!"
+    text = font.render(message, True, (0, 0, 0))
+    screen.fill((255, 255, 255))
+    screen.blit(text, (screen_width // 2 - text.get_width() // 2, screen_height // 2 - text.get_height() // 2))
+    pygame.display.flip()
+    pygame.time.wait(3000)  # Wait 3 seconds before closing or restarting the game
+
+
+def load_characters(file_path):
+    with open(file_path, 'r') as file:
+        data = json.load(file)
+
+    characters = []
+    for char_data in data['characters']:
+        character = Character(
+            name=char_data['name'],
+            hp=char_data['hp'],
+            speed=char_data['speed'],
+            bullet_speed=char_data['bullet_speed'],
+            bullet_image=char_data['bullet_image'],
+            sprite_sheet_path=char_data['sprite_sheet_path'],
+            faceset=char_data['faceset']
+        )
+        characters.append(character)
+
+    return characters
 
 
 def get_image_dimensions(image_path):
