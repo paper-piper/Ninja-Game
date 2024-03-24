@@ -1,6 +1,7 @@
 import pygame
 import math
 from PIL import Image
+import random
 
 # Initialize Pygame
 pygame.init()
@@ -12,11 +13,11 @@ screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Tank Game")
 
 # Images paths
-player_image_path = r'Images/MiniGoose.png'
+player_image_path = r'Images/Players/MiniGoose.png'
 target_image_path = r'Images/target.png'
-map_image_path = r'Images/GooseMapBig.jpg'
-collision_image_path = r'Images/CollisionMap.jpg'
-sprite_sheet_path = r'Images/Walk.png'
+map_image_path = r'Images/Map/detailedMap.png'
+collision_image_path = r'Images/Map/CollisionMap.jpg'
+sprite_sheet_path = r'Images/Players/Walk.png'
 
 # Load images
 player_image = pygame.image.load(player_image_path).convert_alpha()
@@ -26,7 +27,7 @@ collision_map = pygame.image.load(collision_image_path).convert_alpha()
 
 
 # player qualities
-player_speed = 5
+player_speed = 4
 
 
 class Camera:
@@ -64,14 +65,14 @@ class Player:
         self.anim_speed = 10  # Number of frames to wait before switching animation frames
         self.anim_count = 0  # Counter to track animation speed
         self.sprites = {}  # Initialize the sprites dictionary
-        self.load_sprites(sprite_sheet_path)
+        self.load_sprites()
 
-    def load_sprites(self, sprite_sheet_path):
+    def load_sprites(self):
         sprite_sheet = pygame.image.load(sprite_sheet_path).convert_alpha()
-        directions = ['down', 'up', 'left', 'right']  # Assuming this order in columns
+        directions = ['down', 'up', 'left', 'right']  # The correct order
         self.sprites = {direction: [] for direction in directions}
         for col, direction in enumerate(directions):
-            for row in range(4):  # Assuming 4 frames per direction
+            for row in range(4):  # 4 frames per direction
                 frame = sprite_sheet.subsurface(col * self.width, row * self.height, self.width, self.height)
                 self.sprites[direction].append(frame)
 
@@ -104,7 +105,7 @@ class Player:
             self.anim_count = 0  # Reset counter when player stops
 
         # Check collision before actual move
-        if check_collision(self.x + dx, self.y + dy):
+        if check_collision(self.x + dx, self.y + dy, self.width, self.height):
             self.x += dx
             self.y += dy
 
@@ -133,7 +134,46 @@ class Player:
         dy = math.sin(angle) * 10  # Speed of the bullet
 
         # Create and add the new bullet to the bullets list
-        bullets.append(Bullet(center_x, center_y, dx, dy, 5))
+        bullets.append(Bullet(center_x, center_y, dx, dy, 3))
+
+
+class AIPlayer(Player):
+    def __init__(self, x, y, width, height, speed, sprite_sheet_path):
+        super().__init__(x, y, width, height, speed, sprite_sheet_path)
+
+    def move(self, keys, camera):
+        directions = ['left', 'right', 'up', 'down']
+        self.direction = random.choice(directions)
+        dx = dy = 0
+
+        if self.direction == 'left':
+            dx = -self.speed
+        elif self.direction == 'right':
+            dx = self.speed
+        elif self.direction == 'up':
+            dy = -self.speed
+        elif self.direction == 'down':
+            dy = self.speed
+
+        if dx != 0 or dy != 0:
+            self.anim_count += 1
+            if self.anim_count >= self.anim_speed:
+                self.anim_frame = (self.anim_frame + 1) % 4
+                self.anim_count = 0
+        else:
+            self.anim_frame = 0
+            self.anim_count = 0
+
+        if check_collision(self.x + dx, self.y + dy, self.width, self.height):
+            self.x += dx
+            self.y += dy
+
+        self.rect.x = self.x
+        self.rect.y = self.y
+
+    def random_action(self, camera, bullets):
+        if random.random() < 0.01:  # Small chance to shoot
+            self.shoot(camera, bullets)
 
 
 class Bullet:
@@ -146,7 +186,7 @@ class Bullet:
         self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
 
     def move(self):
-        if check_collision(self.x + self.dx, self.y + self.dy):
+        if check_collision(int(self.x + self.dx), int(self.y + self.dy), int(self.radius), int(self.radius)):
             self.x += self.dx
             self.y += self.dy
         else:
@@ -213,6 +253,15 @@ class Game:
             sprite_sheet_path=sprite_sheet_path
         )
 
+        self.ai_player = AIPlayer(
+            x=screen_width // 4,
+            y=screen_height - 40 - frame_height // 2,
+            width=frame_width,
+            height=frame_height,
+            speed=player_speed,
+            sprite_sheet_path=sprite_sheet_path
+        )
+
     def run(self):
         running = True
         while running:
@@ -234,6 +283,8 @@ class Game:
 
     def update_game_objects(self, keys):
         self.player.move(keys, self.camera)
+        self.ai_player.move(keys, self.camera)  # AI player moves randomly
+        self.ai_player.random_action(self.camera, self.bullets)  # AI player may randomly shoot
         self.camera.update(self.player)
         for bullet in self.bullets[:]:
             if bullet.move():
@@ -254,6 +305,7 @@ class Game:
         self.screen.fill((255, 255, 255))
         self.screen.blit(map_image, (self.camera.camera.x, self.camera.camera.y))
         self.player.draw(self.camera)
+        self.ai_player.draw(self.camera)  # Draw AI player
         for bullet in self.bullets:
             bullet.draw(self.camera)
         for target in self.targets:
@@ -266,26 +318,39 @@ def get_image_dimensions(image_path):
     return width, height
 
 
-def check_collision(x, y):
+def check_collision(x, y, width, height):
+    """
+
+    :param x:
+    :param y:
+    :param width:
+    :param height:
+    :return: bool, true if you can move, false if not
+    """
     try:
-        # Convert the floating point x and y to integers for pixel checking
-        int_x = int(x)
-        int_y = int(y)
-        # Get the color of the pixel at the (x, y) position of the collision map
-        pixel_color = collision_map.get_at((int_x, int_y))
+        # Loop through the edges of the rectangle
+        for i in range(x, x + width):
+            for j in [y, y + height - 1]:  # Check top and bottom borders
+                if is_colliding_at(i, j):
+                    return False
 
-        # Extract the RGB components of the pixel color
-        red, green, blue = pixel_color[:3]
+        for i in [x, x + width - 1]:
+            for j in range(y, y + height):  # Check left and right borders
+                if is_colliding_at(i, j):
+                    return False
 
-        # Define the color that represents collidable areas (e.g., white)
-        collidable_color = (255, 255, 255)
-
-        # Check if the pixel color matches the collidable color
-        is_colliding = (red, green, blue) == collidable_color
-
-        return is_colliding
-    except IndexError as i:
+        return True
+    except IndexError:
         return False
+
+
+def is_colliding_at(x, y):
+    int_x = int(x)
+    int_y = int(y)
+    pixel_color = collision_map.get_at((int_x, int_y))
+    red, green, blue = pixel_color[:3]
+    collidable_color = (255, 255, 255)
+    return not (red, green, blue) == collidable_color
 
 
 if __name__ == "__main__":
