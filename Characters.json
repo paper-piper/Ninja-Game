@@ -4,8 +4,8 @@
             "name": "DarkNinja",
             "hp": 120,
             "speed": 3,
-            "bullet_speed": 7,
-            "bullet_damage": 10,
+            "bullet_speed": 40,
+            "bullet_damage": 40,
             "bullet_lifespan": 200,
             "shooting_cooldown": 200
         },
