@@ -30,11 +30,12 @@ CHARACTER_SIZE = 32
 
 
 class Character:
-    def __init__(self, name, hp, speed, bullet_speed, bullet_image):
+    def __init__(self, name, hp, speed, bullet_speed, bullet_damage):
         self.name = name
         self.hp = hp
         self.speed = speed
         self.bullet_speed = bullet_speed
+        self.bullet_damage = bullet_damage
         self.bullet_image = pygame.image.load(f'Images/Characters/{name}/Weapon.png').convert_alpha()
         self.faceset = pygame.image.load(f'Images/Characters/{name}/Faceset.png').convert_alpha()
         self.sprites = self.load_sprites(name)
@@ -106,6 +107,7 @@ class Player:
         self.bullet_speed = character.bullet_speed
         self.bullet_image = character.bullet_image
         self.sprites = character.sprites
+        self.bullet_damage = character.bullet_damage
 
     def draw(self, camera):
         frame = self.sprites[self.direction][self.anim_frame]
@@ -165,7 +167,7 @@ class Player:
         dy = math.sin(angle) * self.bullet_speed  # Speed of the bullet
 
         # Create and add the new bullet to the bullets list
-        self.bullets.append(Bullet(center_x, center_y, dx, dy, 3, self, self.bullet_image))
+        self.bullets.append(Bullet(center_x, center_y, dx, dy, 3, self.bullet_damage, self, self.bullet_image))
 
     def take_damage(self, damage):
         self.hp -= damage
@@ -248,7 +250,7 @@ class AIPlayer(Player):
             angle = math.atan2(self.target_player.y - self.y, self.target_player.x - self.x)
             dx = math.cos(angle) * self.bullet_speed
             dy = math.sin(angle) * self.bullet_speed
-            self.bullets.append(Bullet(self.x + self.width // 2, self.y + self.height // 2, dx, dy, 3, self))
+            self.bullets.append(Bullet(self.x + self.width // 2, self.y + self.height // 2, dx, dy, 3, self.bullet_damage, self, self.bullet_image))
 
     def random_action(self):
         if random.random() < 0.01:  # Chance to shoot at player
@@ -256,12 +258,13 @@ class AIPlayer(Player):
 
 
 class Bullet:
-    def __init__(self, x, y, dx, dy, radius, owner, sprite_sheet, frames_number=2):
+    def __init__(self, x, y, dx, dy, radius, damage, owner, sprite_sheet, frames_number=2):
         self.x = x
         self.y = y
         self.dx = dx
         self.dy = dy
         self.radius = radius
+        self.damage = damage
         self.owner = owner
         self.anim_frame = 0
         self.anim_speed = 10  # You can adjust this to make the animation faster or slower
@@ -407,12 +410,12 @@ class Game:
     def check_collisions(self):
         for bullet in self.player.bullets[:]:
             if bullet.owner != self.ai_player and self.ai_player.rect.collidepoint(bullet.x, bullet.y):
-                self.ai_player.take_damage(10)
+                self.ai_player.take_damage(bullet.damage)
                 self.player.bullets.remove(bullet)
 
         for bullet in self.ai_player.bullets[:]:
             if bullet.owner != self.player and self.player.rect.collidepoint(bullet.x, bullet.y):
-                self.player.take_damage(10)
+                self.player.take_damage(bullet.damage)
                 self.ai_player.bullets.remove(bullet)
 
             # Check for win/lose conditions
@@ -457,7 +460,8 @@ def load_character_from_json(file_path, name):
                 hp=char_data['hp'],
                 speed=char_data['speed'],
                 bullet_speed=char_data['bullet_speed'],
-                bullet_image=char_data['bullet_image'],
+                bullet_damage=char_data['bullet_damage'],
+
             )
 
     raise ValueError(f"No character found with the name {name}")
