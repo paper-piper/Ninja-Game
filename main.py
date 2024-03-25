@@ -27,7 +27,7 @@ collision_map = pygame.image.load(collision_image_path).convert_alpha()
 # player qualities
 player_speed = 4
 CHARACTER_SIZE = 32
-SHOOTING_CHANCE = 0.01
+SHOOTING_CHANCE = 0.05
 
 
 class Character:
