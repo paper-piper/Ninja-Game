@@ -27,15 +27,18 @@ collision_map = pygame.image.load(collision_image_path).convert_alpha()
 # player qualities
 player_speed = 4
 CHARACTER_SIZE = 32
+SHOOTING_CHANCE = 0.01
 
 
 class Character:
-    def __init__(self, name, hp, speed, bullet_speed, bullet_damage):
+    def __init__(self, name, hp, speed, bullet_speed, bullet_damage, bullet_lifespan, shooting_cooldown):
         self.name = name
         self.hp = hp
         self.speed = speed
         self.bullet_speed = bullet_speed
         self.bullet_damage = bullet_damage
+        self.bullet_lifespan = bullet_lifespan
+        self.shooting_cooldown = shooting_cooldown
         self.bullet_image = pygame.image.load(f'Images/Characters/{name}/Weapon.png').convert_alpha()
         self.faceset = pygame.image.load(f'Images/Characters/{name}/Faceset.png').convert_alpha()
         self.sprites = self.load_sprites(name)
@@ -94,6 +97,7 @@ class Player:
         self.height = height
 
         # default qualities
+        self.last_shot_time = 0
         self.bullets = []  # Store bullets for each player
         self.rect = pygame.Rect(x, y, width, height)
         self.direction = 'down'  # Initial direction
@@ -108,6 +112,7 @@ class Player:
         self.bullet_image = character.bullet_image
         self.sprites = character.sprites
         self.bullet_damage = character.bullet_damage
+        self.shooting_cooldown = character.shooting_cooldown
 
     def draw(self, camera):
         frame = self.sprites[self.direction][self.anim_frame]
@@ -146,28 +151,41 @@ class Player:
         self.rect.y = self.y
 
     def shoot(self, camera):
-        # Get the mouse position on the screen
-        mx, my = pygame.mouse.get_pos()
+        current_time = pygame.time.get_ticks()
+        if current_time - self.last_shot_time > self.shooting_cooldown:
+            self.last_shot_time = current_time
+            # Get the mouse position on the screen
+            mx, my = pygame.mouse.get_pos()
 
-        # Adjust the mouse coordinates based on the camera's offset
-        # Since the camera's x and y represent the top-left corner of the view,
-        # you need to add these values to get the correct world position of the mouse
-        world_mx = mx - camera.camera.x
-        world_my = my - camera.camera.y
+            # Adjust the mouse coordinates based on the camera's offset
+            # Since the camera's x and y represent the top-left corner of the view,
+            # you need to add these values to get the correct world position of the mouse
+            world_mx = mx - camera.camera.x
+            world_my = my - camera.camera.y
 
-        # Calculate the center position of the player
-        center_x = self.x + self.width // 2
-        center_y = self.y + self.height // 2
+            # Calculate the center position of the player
+            center_x = self.x + self.width // 2
+            center_y = self.y + self.height // 2
 
-        # Calculate the angle between the player's center and the mouse position in the world
-        angle = math.atan2(world_my - center_y, world_mx - center_x)
+            # Calculate the angle between the player's center and the mouse position in the world
+            angle = math.atan2(world_my - center_y, world_mx - center_x)
 
-        # Calculate the bullet's direction vector based on the angle
-        dx = math.cos(angle) * self.bullet_speed  # Speed of the bullet
-        dy = math.sin(angle) * self.bullet_speed  # Speed of the bullet
+            # Calculate the bullet's direction vector based on the angle
+            dx = math.cos(angle) * self.bullet_speed  # Speed of the bullet
+            dy = math.sin(angle) * self.bullet_speed  # Speed of the bullet
 
-        # Create and add the new bullet to the bullets list
-        self.bullets.append(Bullet(center_x, center_y, dx, dy, 3, self.bullet_damage, self, self.bullet_image))
+            # Create and add the new bullet to the bullets list
+            self.bullets.append(Bullet(
+                center_x,
+                center_y,
+                dx,
+                dy,
+                3,
+                self.bullet_damage,
+                self,
+                self.shooting_cooldown,
+                self.bullet_image)
+            )
 
     def take_damage(self, damage):
         self.hp -= damage
@@ -250,15 +268,15 @@ class AIPlayer(Player):
             angle = math.atan2(self.target_player.y - self.y, self.target_player.x - self.x)
             dx = math.cos(angle) * self.bullet_speed
             dy = math.sin(angle) * self.bullet_speed
-            self.bullets.append(Bullet(self.x + self.width // 2, self.y + self.height // 2, dx, dy, 3, self.bullet_damage, self, self.bullet_image))
+            self.bullets.append(Bullet(self.x + self.width // 2, self.y + self.height // 2, dx, dy, 3, self.bullet_damage, self, self.shooting_cooldown, self.bullet_image))
 
     def random_action(self):
-        if random.random() < 0.01:  # Chance to shoot at player
+        if random.random() < SHOOTING_CHANCE:  # Chance to shoot at player
             self.shoot_at_player()
 
 
 class Bullet:
-    def __init__(self, x, y, dx, dy, radius, damage, owner, sprite_sheet, frames_number=2):
+    def __init__(self, x, y, dx, dy, radius, damage, owner, lifespan, sprite_sheet, frames_number=2):
         self.x = x
         self.y = y
         self.dx = dx
@@ -266,6 +284,7 @@ class Bullet:
         self.radius = radius
         self.damage = damage
         self.owner = owner
+        self.lifespan = lifespan
         self.anim_frame = 0
         self.anim_speed = 10  # You can adjust this to make the animation faster or slower
         self.anim_count = 0
@@ -285,10 +304,15 @@ class Bullet:
         frame_width = sprite_sheet.get_width() // frames_number
         for i in range(frames_number):
             frame = sprite_sheet.subsurface(i * frame_width, 0, frame_width, sprite_sheet.get_height())
-            frames.append(frame)
+            scaled_frame = pygame.transform.scale(frame, (frame_width * 2, frame_width * 2))
+
+            frames.append(scaled_frame)
         return frames
 
     def move(self):
+        self.lifespan -= 1  # Decrease lifespan each frame
+        if self.lifespan <= 0:
+            return True  # Signal to remove this bullet
         did_collide = False
         if check_collision(int(self.x + self.dx), int(self.y + self.dy), int(self.radius), int(self.radius)):
             self.x += self.dx
@@ -372,7 +396,11 @@ class Game:
 
     def run(self):
         running = True
+        winning_state = None
         while running:
+            winning_state = self.get_winning_state()
+            if winning_state:
+                return winning_state
             running = self.handle_events()
             keys = pygame.key.get_pressed()
             self.update_game_objects(keys)
@@ -380,6 +408,14 @@ class Game:
             self.draw_game_objects()
             pygame.display.flip()
             pygame.time.Clock().tick(60)
+
+    def get_winning_state(self):
+        # Check for win/lose conditions
+        if self.player.hp == 0:
+            return "Lose"
+        elif self.ai_player.hp == 0:
+            return "Win"
+        return None
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -418,11 +454,7 @@ class Game:
                 self.player.take_damage(bullet.damage)
                 self.ai_player.bullets.remove(bullet)
 
-            # Check for win/lose conditions
-        if self.player.hp == 0:
-            display_end_screen("Lose")
-        elif self.ai_player.hp == 0:
-            display_end_screen("Win")
+
 
     def draw_game_objects(self):
         self.screen.fill((255, 255, 255))
@@ -445,7 +477,7 @@ def display_end_screen(result):
     screen.fill((255, 255, 255))
     screen.blit(text, (screen_width // 2 - text.get_width() // 2, screen_height // 2 - text.get_height() // 2))
     pygame.display.flip()
-    pygame.time.wait(3000)  # Wait 3 seconds before closing or restarting the game
+    pygame.time.wait(300)  # Wait 3 seconds before closing or restarting the game
 
 
 def load_character_from_json(file_path, name):
@@ -454,14 +486,14 @@ def load_character_from_json(file_path, name):
 
     for char_data in data['characters']:
         if char_data['name'] == name:
-            # Assuming the structure of the images directory
             return Character(
                 name=char_data['name'],
                 hp=char_data['hp'],
                 speed=char_data['speed'],
                 bullet_speed=char_data['bullet_speed'],
                 bullet_damage=char_data['bullet_damage'],
-
+                bullet_lifespan=char_data['bullet_lifespan'],
+                shooting_cooldown=char_data['shooting_cooldown']
             )
 
     raise ValueError(f"No character found with the name {name}")
@@ -516,4 +548,5 @@ if __name__ == "__main__":
     # menu.display_main_menu()
     MAP_WIDTH, MAP_HEIGHT = get_image_dimensions(MAP_IMAGE_PATH)
     game = Game(screen)
-    game.run()
+    winning_state = game.run()
+    display_end_screen(winning_state)

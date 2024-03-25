@@ -5,14 +5,18 @@
             "hp": 120,
             "speed": 3,
             "bullet_speed": 7,
-            "bullet_damage": 50
+            "bullet_damage": 10,
+            "bullet_lifespan": 200,
+            "shooting_cooldown": 200
         },
         {
             "name": "Eskimo",
             "hp": 100,
             "speed": 2,
             "bullet_speed": 20,
-            "bullet_damage": 10
+            "bullet_damage": 10,
+            "bullet_lifespan": 180,
+            "shooting_cooldown": 45
         }
     ]
 }
