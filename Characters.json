@@ -4,13 +4,13 @@
             "name": "DarkNinja",
             "hp": 120,
             "speed": 3,
-            "bullet_speed": 15,
+            "bullet_speed": 7,
             "bullet_image": "Images/Bullets/knight_bullet.png"
         },
         {
             "name": "Eskimo",
             "hp": 100,
-            "speed": 4,
+            "speed": 2,
             "bullet_speed": 20,
             "bullet_image": "Images/Bullets/knight_bullet.png"
         }

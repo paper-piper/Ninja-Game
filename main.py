@@ -14,21 +14,19 @@ screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Tank Game")
 
 # Images paths
-player_image_path = r'Images/Characters/MiniGoose.png'
-target_image_path = r'Images/target.png'
-map_image_path = r'Images/Map/detailedMap.png'
-collision_image_path = r'Images/Map/CollisionMap.jpg'
-sprite_sheet_path = r'Images/Characters/Walk.png'
+MAP_IMAGE_PATH = r'Images/Map/detailedMap.png'
+collision_image_path = r'Images/Map/UpdatedCollisoin.png'
+CHARACTER_STATS_FILE_PATH = "Characters.json"
 
+MAP_WIDTH = 0
+MAP_HEIGHT = 0
 # Load images
-player_image = pygame.image.load(player_image_path).convert_alpha()
-target_image = pygame.image.load(target_image_path).convert_alpha()
-map_image = pygame.image.load(map_image_path).convert_alpha()
+map_image = pygame.image.load(MAP_IMAGE_PATH).convert_alpha()
 collision_map = pygame.image.load(collision_image_path).convert_alpha()
-
 
 # player qualities
 player_speed = 4
+CHARACTER_SIZE = 32
 
 
 class Character:
@@ -37,22 +35,30 @@ class Character:
         self.hp = hp
         self.speed = speed
         self.bullet_speed = bullet_speed
-        self.bullet_image = bullet_image
+        self.bullet_image = pygame.image.load(f'Images/Characters/{name}/Weapon.png').convert_alpha()
+        self.faceset = pygame.image.load(f'Images/Characters/{name}/Faceset.png').convert_alpha()
         self.sprites = self.load_sprites(name)
-        self.faceset = pygame.image.load(f'Characters/{name}/Faceset.png').convert_alpha()
 
     def load_sprites(self, name):
-        sprite_sheet = pygame.image.load(f'Characters/{name}/SeparateAnim/Walk.png').convert_alpha()
+        sprite_sheet = pygame.image.load(f'Images/Characters/{name}/SeparateAnim/Walk.png').convert_alpha()
         sprites = {
             'down': [],
             'up': [],
             'left': [],
             'right': []
         }
+        original_sprite_size = 16  # Original size of the sprite
+        scaled_sprite_size = 32  # New size of the sprite after scaling
+
         for col, direction in enumerate(sprites.keys()):
             for row in range(4):  # Assuming 4 frames per direction
-                frame = sprite_sheet.subsurface(col * 64, row * 64, 64, 64)
-                sprites[direction].append(frame)
+                # Extract the original frame from the sprite sheet
+                original_frame = sprite_sheet.subsurface(col * original_sprite_size, row * original_sprite_size,
+                                                         original_sprite_size, original_sprite_size)
+                # Scale the frame
+                scaled_frame = pygame.transform.scale(original_frame, (scaled_sprite_size, scaled_sprite_size))
+                sprites[direction].append(scaled_frame)
+
         return sprites
 
 
@@ -98,16 +104,8 @@ class Player:
         self.speed = character.speed
         self.hp = character.hp
         self.bullet_speed = character.bullet_speed
-        self.sprites = character.load_sprites()
-
-    def load_sprites(self):
-        sprite_sheet = pygame.image.load(sprite_sheet_path).convert_alpha()
-        directions = ['down', 'up', 'left', 'right']  # The correct order
-        self.sprites = {direction: [] for direction in directions}
-        for col, direction in enumerate(directions):
-            for row in range(4):  # 4 frames per direction
-                frame = sprite_sheet.subsurface(col * self.width, row * self.height, self.width, self.height)
-                self.sprites[direction].append(frame)
+        self.bullet_image = character.bullet_image
+        self.sprites = character.sprites
 
     def draw(self, camera):
         frame = self.sprites[self.direction][self.anim_frame]
@@ -167,7 +165,7 @@ class Player:
         dy = math.sin(angle) * self.bullet_speed  # Speed of the bullet
 
         # Create and add the new bullet to the bullets list
-        self.bullets.append(Bullet(center_x, center_y, dx, dy, 3, self))
+        self.bullets.append(Bullet(center_x, center_y, dx, dy, 3, self, self.bullet_image))
 
     def take_damage(self, damage):
         self.hp -= damage
@@ -180,40 +178,57 @@ class AIPlayer(Player):
     def __init__(self, character, x, y, width, height, target_player):
         super().__init__(character, x, y, width, height)
         self.target_player = target_player
-        self.shoot_distance = 250  # Distance at which AI starts shooting
+        self.destination = self.choose_destination()
+        self.shoot_distance = 20
 
-    def move(self, camera):
+    def choose_destination(self):
+        # Choose a random destination on the map
+        while True:
+            x = random.randint(0, MAP_WIDTH - self.width)
+            y = random.randint(0, MAP_HEIGHT - self.height)
+            if check_collision(x, y, self.width, self.height):
+                return x, y
+
+    def move_towards_destination(self):
         dx, dy = 0, 0
 
-        # Calculate distance to the target player
-        distance_x = self.target_player.x - self.x
-        distance_y = self.target_player.y - self.y
-        distance = math.hypot(distance_x, distance_y)
+        distance_x = abs(self.destination[0] - self.x)
+        distance_y = abs(self.destination[1] - self.y)
 
-        # Move towards or away from the player to maintain a strategic distance
-        if distance > self.shoot_distance:
-            dx = self.speed if distance_x > 0 else -self.speed
-            dy = self.speed if distance_y > 0 else -self.speed
-        elif distance < self.shoot_distance - 50:  # Buffer for too close
-            dx = -self.speed if distance_x > 0 else self.speed
-            dy = -self.speed if distance_y > 0 else self.speed
+        if distance_x > distance_y:  # Prioritize horizontal movement
+            if self.x < self.destination[0]:
+                dx = self.speed
+            elif self.x > self.destination[0]:
+                dx = -self.speed
+        else:  # Prioritize vertical movement
+            if self.y < self.destination[1]:
+                dy = self.speed
+            elif self.y > self.destination[1]:
+                dy = -self.speed
 
-        # Randomly avoid getting hit (simple dodge behavior)
-        if random.random() < 0.1:
-            dx = -dx
-            dy = -dy
+        return dx, dy
+
+    def move(self, camera):
+        dx, dy = self.move_towards_destination()
+
+        # Check if AI has reached its destination or if the destination is blocked
+        if (self.x, self.y) == self.destination or not check_collision(self.x + dx, self.y + dy, self.width, self.height):
+            self.destination = self.choose_destination()
 
         # Update the direction based on movement
-        if abs(distance_x) > abs(distance_y):
-            self.direction = 'right' if dx > 0 else 'left'
-        else:
-            self.direction = 'up' if dy < 0 else 'down'
+        if dx > 0:
+            self.direction = 'right'
+        elif dx < 0:
+            self.direction = 'left'
+        elif dy > 0:
+            self.direction = 'down'
+        elif dy < 0:
+            self.direction = 'up'
 
         # Update position and animation
         if dx != 0 or dy != 0:
-            if check_collision(self.x + dx, self.y + dy, self.width, self.height):
-                self.x += dx
-                self.y += dy
+            self.x += dx
+            self.y += dy
             self.update_animation()
 
         self.rect.x = self.x
@@ -236,47 +251,63 @@ class AIPlayer(Player):
             self.bullets.append(Bullet(self.x + self.width // 2, self.y + self.height // 2, dx, dy, 3, self))
 
     def random_action(self):
-        if random.random() < 0.02:  # Chance to shoot at player
+        if random.random() < 0.01:  # Chance to shoot at player
             self.shoot_at_player()
 
 
 class Bullet:
-    def __init__(self, x, y, dx, dy, radius, owner, image=None):
+    def __init__(self, x, y, dx, dy, radius, owner, sprite_sheet, frames_number=2):
         self.x = x
         self.y = y
         self.dx = dx
         self.dy = dy
         self.radius = radius
         self.owner = owner
-        self.image = image or pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
-        pygame.draw.circle(self.image, (0, 0, 0), (radius, radius), radius)
+        self.anim_frame = 0
+        self.anim_speed = 10  # You can adjust this to make the animation faster or slower
+        self.anim_count = 0
+
+        # If a sprite sheet path is provided, load it; otherwise, create a surface and draw a circle on it.
+        if sprite_sheet:
+            self.sprites = self.load_bullet_sprites(sprite_sheet, frames_number)
+            self.image = self.sprites[self.anim_frame]  # Start with the first frame
+        else:
+            self.image = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+            pygame.draw.circle(self.image, (0, 0, 0), (radius, radius), radius)
+
         self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
 
+    def load_bullet_sprites(self, sprite_sheet, frames_number):
+        frames = []  # Assuming that frames are laid out horizontally
+        frame_width = sprite_sheet.get_width() // frames_number
+        for i in range(frames_number):
+            frame = sprite_sheet.subsurface(i * frame_width, 0, frame_width, sprite_sheet.get_height())
+            frames.append(frame)
+        return frames
+
     def move(self):
+        did_collide = False
         if check_collision(int(self.x + self.dx), int(self.y + self.dy), int(self.radius), int(self.radius)):
             self.x += self.dx
             self.y += self.dy
         else:
-            return True
+            did_collide = True
         self.rect.x = self.x - self.radius
         self.rect.y = self.y - self.radius
-        return False
+
+        # Update animation
+        self.anim_count += 1
+        if self.anim_count >= self.anim_speed:
+            self.anim_frame = (self.anim_frame + 1) % len(self.sprites)
+            self.anim_count = 0
+            self.image = self.sprites[self.anim_frame]  # Update the image to the next frame
+        return did_collide
 
     def draw(self, camera):
         if self.image:
             screen.blit(self.image, camera.apply(self).topleft)
         else:
             pygame.draw.circle(screen, (0, 0, 0), camera.apply(self).center, self.radius)
-
-
-class Target:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        self.rect = pygame.Rect(x, y, target_image.get_width(), target_image.get_height())
-
-    def draw(self, camera):
-        screen.blit(target_image, camera.apply(self))
 
 
 class Menu:
@@ -309,31 +340,30 @@ class Menu:
 class Game:
     def __init__(self, screen):
         self.screen = screen
-        self.map_width, self.map_height = get_image_dimensions(map_image_path)
+        self.map_width, self.map_height = get_image_dimensions(MAP_IMAGE_PATH)
         self.camera = Camera(self.map_width, self.map_height)
 
         # Character selection (pseudo-code)
         chosen_character_name = "DarkNinja"  # Example character selection
-        character_stats = {"hp": 100, "speed": 4, "bullet_speed": 10}  # Example stats
-        character = Character(chosen_character_name, **character_stats)
+        character = load_character_from_json(CHARACTER_STATS_FILE_PATH, chosen_character_name)
 
         self.player = Player(
             character,
-            x=screen_width // 2,
-            y=screen_height - 40 - 64 // 2,  # Assume 64x64 character size
-            width=64,
-            height=64
+            x=self.map_width // 2,
+            y=self.map_height - CHARACTER_SIZE * 2,
+            width=CHARACTER_SIZE,
+            height=CHARACTER_SIZE
         )
 
         # AI player setup
         ai_character_name = "Eskimo"  # Example AI character selection
-        ai_character = Character(ai_character_name, **character_stats)  # AI character might have different stats
+        ai_character = load_character_from_json(CHARACTER_STATS_FILE_PATH, ai_character_name)
         self.ai_player = AIPlayer(
             ai_character,
-            x=screen_width // 4,
-            y=screen_height - 40 - 64 // 2,
-            width=64,
-            height=64,
+            x=self.map_width // 2 - 70, # give some space to other player
+            y=self.map_height - CHARACTER_SIZE * 2,
+            width=CHARACTER_SIZE,
+            height=CHARACTER_SIZE,
             target_player=self.player
         )
 
@@ -415,22 +445,22 @@ def display_end_screen(result):
     pygame.time.wait(3000)  # Wait 3 seconds before closing or restarting the game
 
 
-def load_characters(file_path):
+def load_character_from_json(file_path, name):
     with open(file_path, 'r') as file:
         data = json.load(file)
 
-    characters = []
     for char_data in data['characters']:
-        character = Character(
-            name=char_data['name'],
-            hp=char_data['hp'],
-            speed=char_data['speed'],
-            bullet_speed=char_data['bullet_speed'],
-            bullet_image=char_data['bullet_image'],
-        )
-        characters.append(character)
+        if char_data['name'] == name:
+            # Assuming the structure of the images directory
+            return Character(
+                name=char_data['name'],
+                hp=char_data['hp'],
+                speed=char_data['speed'],
+                bullet_speed=char_data['bullet_speed'],
+                bullet_image=char_data['bullet_image'],
+            )
 
-    return characters
+    raise ValueError(f"No character found with the name {name}")
 
 
 def get_image_dimensions(image_path):
@@ -469,9 +499,8 @@ def is_colliding_at(x, y):
     int_x = int(x)
     int_y = int(y)
     pixel_color = collision_map.get_at((int_x, int_y))
-    red, green, blue = pixel_color[:3]
-    collidable_color = (255, 255, 255)
-    return not (red, green, blue) == collidable_color
+    alpha = pixel_color[3]
+    return not alpha == 0
 
 
 if __name__ == "__main__":
@@ -480,7 +509,7 @@ if __name__ == "__main__":
     pygame.display.set_caption("Ninja Game")
 
     menu = Menu(screen)
-    menu.display_main_menu()
-
+    # menu.display_main_menu()
+    MAP_WIDTH, MAP_HEIGHT = get_image_dimensions(MAP_IMAGE_PATH)
     game = Game(screen)
     game.run()
