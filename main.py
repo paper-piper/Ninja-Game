@@ -194,7 +194,7 @@ class Player:
             # Handle player death here if needed
 
 
-class AIPlayer(Player):
+class RemotePlayer(Player):
     def __init__(self, character, x, y, width, height, target_player):
         super().__init__(character, x, y, width, height)
         self.target_player = target_player
@@ -385,7 +385,7 @@ class Game:
         # AI player setup
         ai_character_name = "Eskimo"  # Example AI character selection
         ai_character = load_character_from_json(CHARACTER_STATS_FILE_PATH, ai_character_name)
-        self.ai_player = AIPlayer(
+        self.ai_player = RemotePlayer(
             ai_character,
             x=self.map_width // 2 - 70, # give some space to other player
             y=self.map_height - CHARACTER_SIZE * 2,
