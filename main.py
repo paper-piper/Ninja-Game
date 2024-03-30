@@ -10,7 +10,7 @@ pygame.init()
 # Set up the display
 screen_width = 800
 screen_height = 600
-screen = pygame.display.set_mode((screen_width, screen_height))
+SCREEN = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Tank Game")
 
 # Images paths
@@ -28,6 +28,28 @@ collision_map = pygame.image.load(collision_image_path).convert_alpha()
 player_speed = 4
 CHARACTER_SIZE = 32
 SHOOTING_CHANCE = 0.05
+
+
+class Camera:
+    def __init__(self, width, height):
+        self.camera = pygame.Rect(0, 0, width, height)
+        self.width = width
+        self.height = height
+
+    def apply(self, entity):
+        return entity.rect.move(self.camera.topleft)
+
+    def update(self, target):
+        x = -target.rect.x + int(screen_width / 2)
+        y = -target.rect.y + int(screen_height / 2)
+
+        # limit scrolling to map size
+        x = min(0, x)  # left
+        y = min(0, y)  # top
+        x = max(-(self.width - screen_width), x)  # right
+        y = max(-(self.height - screen_height), y)  # bottom
+
+        self.camera = pygame.Rect(x, y, self.width, self.height)
 
 
 class Character:
@@ -66,28 +88,6 @@ class Character:
         return sprites
 
 
-class Camera:
-    def __init__(self, width, height):
-        self.camera = pygame.Rect(0, 0, width, height)
-        self.width = width
-        self.height = height
-
-    def apply(self, entity):
-        return entity.rect.move(self.camera.topleft)
-
-    def update(self, target):
-        x = -target.rect.x + int(screen_width / 2)
-        y = -target.rect.y + int(screen_height / 2)
-
-        # limit scrolling to map size
-        x = min(0, x)  # left
-        y = min(0, y)  # top
-        x = max(-(self.width - screen_width), x)  # right
-        y = max(-(self.height - screen_height), y)  # bottom
-
-        self.camera = pygame.Rect(x, y, self.width, self.height)
-
-
 class Player:
     def __init__(self, character, x, y, width, height):
         # game qualities
@@ -116,7 +116,7 @@ class Player:
 
     def draw(self, camera):
         frame = self.sprites[self.direction][self.anim_frame]
-        screen.blit(frame, camera.apply(self))
+        SCREEN.blit(frame, camera.apply(self))
 
     def move(self, keys, camera):
         dx = dy = 0
@@ -332,9 +332,9 @@ class Bullet:
 
     def draw(self, camera):
         if self.image:
-            screen.blit(self.image, camera.apply(self).topleft)
+            SCREEN.blit(self.image, camera.apply(self).topleft)
         else:
-            pygame.draw.circle(screen, (0, 0, 0), camera.apply(self).center, self.radius)
+            pygame.draw.circle(SCREEN, (0, 0, 0), camera.apply(self).center, self.radius)
 
 
 class Menu:
@@ -474,8 +474,8 @@ def display_end_screen(result):
     else:
         message = "You Lose!"
     text = font.render(message, True, (0, 0, 0))
-    screen.fill((255, 255, 255))
-    screen.blit(text, (screen_width // 2 - text.get_width() // 2, screen_height // 2 - text.get_height() // 2))
+    SCREEN.fill((255, 255, 255))
+    SCREEN.blit(text, (screen_width // 2 - text.get_width() // 2, screen_height // 2 - text.get_height() // 2))
     pygame.display.flip()
     pygame.time.wait(300)  # Wait 3 seconds before closing or restarting the game
 
@@ -541,12 +541,12 @@ def is_colliding_at(x, y):
 
 if __name__ == "__main__":
     pygame.init()
-    screen = pygame.display.set_mode((screen_width, screen_height))
+    SCREEN = pygame.display.set_mode((screen_width, screen_height))
     pygame.display.set_caption("Ninja Game")
 
-    menu = Menu(screen)
+    menu = Menu(SCREEN)
     # menu.display_main_menu()
     MAP_WIDTH, MAP_HEIGHT = get_image_dimensions(MAP_IMAGE_PATH)
-    game = Game(screen)
+    game = Game(SCREEN)
     winning_state = game.run()
     display_end_screen(winning_state)
