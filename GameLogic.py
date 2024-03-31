@@ -41,20 +41,19 @@ class Camera:
         return entity.rect.move(self.camera.topleft)
 
     def update(self, keys):
+        # Initialize x and y to the current camera position
+        x, y = self.camera.x, self.camera.y
         # Movement of the camera based on keyboard input
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            self.camera.x = max(self.camera.x - self.speed, 0)  # left
+            x = max(x - self.speed, 0)  # left
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            self.camera.x = min(self.camera.x + self.speed, self.width - screen_width)  # right
+            x = min(x + self.speed, self.width - screen_width)  # right
         if keys[pygame.K_UP] or keys[pygame.K_w]:
-            self.camera.y = max(self.camera.y - self.speed, 0)  # up
+            y = max(y - self.speed, 0)  # up
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            self.camera.y = min(self.camera.y + self.speed, self.height - screen_height)  # down
+            y = min(y + self.speed, self.height - screen_height)  # down
 
-    def adjust_for_bounds(self):
-        # Adjust camera to stay within map boundaries
-        self.camera.x = max(min(self.camera.x, self.width - screen_width), 0)
-        self.camera.y = max(min(self.camera.y, self.height - screen_height), 0)
+        self.camera = pygame.Rect(x, y, self.width, self.height)
 
     def follow_target(self, target):
         x = -target.rect.x + int(screen_width / 2)
@@ -65,8 +64,6 @@ class Camera:
         y = min(0, y)  # top
         x = max(-(self.width - screen_width), x)  # right
         y = max(-(self.height - screen_height), y)  # bottom
-
-        self.camera = pygame.Rect(x, y, self.width, self.height)
 
         self.camera = pygame.Rect(x, y, self.width, self.height)
 
@@ -137,7 +134,7 @@ class Player:
         frame = self.sprites[self.direction][self.anim_frame]
         SCREEN.blit(frame, camera.apply(self))
 
-    def move(self, direction, camera):
+    def move(self, direction):
         dx = dy = 0
         if direction == 'left':
             dx = -self.speed
@@ -169,18 +166,14 @@ class Player:
         self.rect.x = self.x
         self.rect.y = self.y
 
-    def shoot(self, camera, angle):
+    def shoot(self, angle):
         current_time = pygame.time.get_ticks()
         if current_time - self.last_shot_time > self.shooting_cooldown:
             self.last_shot_time = current_time
-            # Get the mouse position on the screen
-            mx, my = pygame.mouse.get_pos()
 
             # Adjust the mouse coordinates based on the camera's offset
             # Since the camera's x and y represent the top-left corner of the view,
             # you need to add these values to get the correct world position of the mouse
-            world_mx = mx - camera.camera.x
-            world_my = my - camera.camera.y
 
             # Calculate the center position of the player
             center_x = self.x + self.width // 2
@@ -208,7 +201,6 @@ class Player:
         if self.hp <= 0:
             self.hp = 0
             # Handle player death here if needed
-
 
 
 class Bullet:
@@ -324,11 +316,11 @@ class Game:
 
     def move_player(self, player_id, direction):
         if player_id in self.players:
-            self.players[player_id].move(direction, self.camera)
+            self.players[player_id].move(direction)
 
     def shoot_player(self, player_id, angle):
         if player_id in self.players:
-            self.players[player_id].shoot(self.camera, angle)
+            self.players[player_id].shoot(angle)
 
     def run(self):
         running = True
@@ -456,9 +448,11 @@ def start_game():
     pygame.display.set_caption("Ninja Game")
     MAP_WIDTH, MAP_HEIGHT = get_image_dimensions(MAP_IMAGE_PATH)
     game = Game(SCREEN)
-    winning_state = game.run()
+    game.run()
+    winning_state = True
     display_end_screen(winning_state)
 
 
+# TODO: remove this line before running skeleton server
 if __name__ == "__main__":
     start_game()
