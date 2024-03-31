@@ -2,9 +2,21 @@ import pygame
 from PIL import Image
 import math
 import json
+import random
+import logging
 
-# Initialize Pygame
-pygame.init()
+# Initialize logger
+logger = logging.getLogger("GameLogic")
+logger.setLevel(logging.DEBUG)
+file_handler = logging.FileHandler('GameLogic.log')
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s - Line: %(lineno)d',
+                                            datefmt='%Y-%m-%d %H:%M:%S'))
+logger.addHandler(file_handler)
+
+# Configure PIL logger to not propagate messages to the root logger
+pil_logger = logging.getLogger('PIL')
+pil_logger.setLevel(logging.WARNING)
+pil_logger.propagate = False
 
 # Set up the display
 screen_width = 800
@@ -32,28 +44,24 @@ SHOOTING_CHANCE = 0.05
 
 class Camera:
     def __init__(self, width, height):
-        self.camera = pygame.Rect(0, 0, width, height)
+        self.camera = pygame.Rect(0, 0, screen_width, screen_height)
         self.width = width
         self.height = height
         self.speed = 5  # Camera movement speed
 
     def apply(self, entity):
-        return entity.rect.move(self.camera.topleft)
+        # Move the entity's position according to the camera's position
+        return entity.rect.move(-self.camera.x, -self.camera.y)
 
     def update(self, keys):
-        # Initialize x and y to the current camera position
-        x, y = self.camera.x, self.camera.y
-        # Movement of the camera based on keyboard input
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            x = max(x - self.speed, 0)  # left
+            self.camera.x = max(self.camera.x - self.speed, 0)
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            x = min(x + self.speed, self.width - screen_width)  # right
+            self.camera.x = min(self.camera.x + self.speed, self.width - screen_width)
         if keys[pygame.K_UP] or keys[pygame.K_w]:
-            y = max(y - self.speed, 0)  # up
+            self.camera.y = max(self.camera.y - self.speed, 0)
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            y = min(y + self.speed, self.height - screen_height)  # down
-
-        self.camera = pygame.Rect(x, y, self.width, self.height)
+            self.camera.y = min(self.camera.y + self.speed, self.height - screen_height)
 
     def follow_target(self, target):
         x = -target.rect.x + int(screen_width / 2)
@@ -299,7 +307,23 @@ class Game:
         self.camera = Camera(self.map_width, self.map_height)
         self.players = {}
 
-    def create_player(self, player_id, character_name, x, y):
+    def run(self):
+        running = True
+        self.create_player(1, "DarkNinja")
+        # TODO: add winning
+        while running:
+            keys = pygame.key.get_pressed()
+            self.camera.update(keys)  # Update camera based on keyboard input
+            running = self.handle_events()
+            self.update_bullets()
+            self.draw_game_objects()
+            pygame.display.flip()
+            pygame.time.Clock().tick(60)
+
+    def create_player(self, player_id, character_name):
+        x, y = self.find_random_free_position(CHARACTER_WIDTH, CHARACTER_HEIGHT)
+        if not x:
+            logger.error("Didn't found any x,y for the player to be created")
         character = load_character_from_json(CHARACTER_STATS_FILE_PATH, character_name)
         player = Player(
             character,
@@ -309,6 +333,26 @@ class Game:
             CHARACTER_HEIGHT
         )
         self.players[player_id] = player
+        logger.info(f"Created new player ({character_name}) in x = {x}, y = {y}")
+
+    def find_random_free_position(self, object_width, object_height):
+        """
+        Find a random position within the map where an object of the given size can be placed without collision.
+
+        :param object_width: The width of the object to place
+        :param object_height: The height of the object to place
+        :return: A tuple (x, y) representing the top-left corner of the free area found
+        """
+        max_attempts = 1000  # Limit the number of attempts to find a free spot
+        for _ in range(max_attempts):
+            x = random.randint(0, MAP_WIDTH - object_width)
+            y = random.randint(0, MAP_HEIGHT - object_height)
+
+            if check_collision(x, y, object_width, object_height):
+                return x, y  # Found a free spot
+
+        # If no free spot is found after max_attempts, return None or raise an error
+        return None
 
     def delete_player(self, player_id):
         if player_id in self.players:
@@ -321,19 +365,6 @@ class Game:
     def shoot_player(self, player_id, angle):
         if player_id in self.players:
             self.players[player_id].shoot(angle)
-
-    def run(self):
-        running = True
-        # TODO: add winning
-        while running:
-            keys = pygame.key.get_pressed()
-            self.camera.update(keys)  # Update camera based on keyboard input
-
-            running = self.handle_events()
-            self.update_bullets()
-            self.draw_game_objects()
-            pygame.display.flip()
-            pygame.time.Clock().tick(60)
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -362,7 +393,9 @@ class Game:
 
     def draw_game_objects(self):
         self.screen.fill((255, 255, 255))
-        self.screen.blit(map_image, (self.camera.camera.x, self.camera.camera.y))
+        map_offset_x = -self.camera.camera.x
+        map_offset_y = -self.camera.camera.y
+        self.screen.blit(map_image, (map_offset_x, map_offset_y))
         for player in self.players.values():
             player.draw(self.camera)
             for bullet in player.bullets:
