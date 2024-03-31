@@ -273,39 +273,23 @@ class Bullet:
             pygame.draw.circle(SCREEN, (0, 0, 0), camera.apply(self).center, self.radius)
 
 
-class Menu:
-    def __init__(self, screen):
-        self.screen = screen
-        self.screen_width = screen.get_width()
-        self.screen_height = screen.get_height()
-
-    def display_main_menu(self):
-        continue_menu = True
-        while continue_menu:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    quit()
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_RETURN:
-                        continue_menu = False
-            self.screen.fill((255, 255, 255))
-            font = pygame.font.SysFont("Arial", 48)
-            text = font.render("Press Enter to Start", True, (0, 0, 0))
-            self.screen.blit(
-                text,
-                (self.screen_width // 2 - text.get_width() // 2, self.screen_height // 2 - text.get_height() // 2)
-            )
-            pygame.display.flip()
-            pygame.time.Clock().tick(60)
-
-
 class Game:
-    def __init__(self, screen):
+    def __init__(self):
+        global MAP_WIDTH, MAP_HEIGHT
+        MAP_WIDTH, MAP_HEIGHT = get_image_dimensions(MAP_IMAGE_PATH)
+        screen = pygame.display.set_mode((screen_width, screen_height))
         self.screen = screen
         self.map_width, self.map_height = get_image_dimensions(MAP_IMAGE_PATH)
         self.camera = Camera(self.map_width, self.map_height)
         self.players = {}
+
+    def update(self):
+        # This method will be called by the server to update the game state
+        keys = pygame.key.get_pressed()
+        self.camera.update(keys)  # Or update camera based on other logic
+        self.update_bullets()
+        self.draw_game_objects()
+        pygame.display.flip()
 
     def run(self):
         running = True
@@ -335,20 +319,21 @@ class Game:
         self.players[player_id] = player
         logger.info(f"Created new player ({character_name}) in x = {x}, y = {y}")
 
-    def find_random_free_position(self, object_width, object_height):
+    def find_random_free_position(self, character_width, character_height):
         """
         Find a random position within the map where an object of the given size can be placed without collision.
 
-        :param object_width: The width of the object to place
-        :param object_height: The height of the object to place
+        :param character_width: The width of the object to place
+        :param character_height: The height of the object to place
         :return: A tuple (x, y) representing the top-left corner of the free area found
         """
+        return 0, 0
         max_attempts = 1000  # Limit the number of attempts to find a free spot
         for _ in range(max_attempts):
-            x = random.randint(0, MAP_WIDTH - object_width)
-            y = random.randint(0, MAP_HEIGHT - object_height)
+            x = random.randint(0, MAP_WIDTH - character_width)
+            y = random.randint(0, MAP_HEIGHT - character_height)
 
-            if check_collision(x, y, object_width, object_height):
+            if check_collision(x, y, character_width, character_height):
                 return x, y  # Found a free spot
 
         # If no free spot is found after max_attempts, return None or raise an error
@@ -480,7 +465,7 @@ def start_game():
     SCREEN = pygame.display.set_mode((screen_width, screen_height))
     pygame.display.set_caption("Ninja Game")
     MAP_WIDTH, MAP_HEIGHT = get_image_dimensions(MAP_IMAGE_PATH)
-    game = Game(SCREEN)
+    game = Game()
     game.run()
     winning_state = True
     display_end_screen(winning_state)
