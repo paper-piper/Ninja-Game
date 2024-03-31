@@ -53,14 +53,14 @@ class Camera:
         # Move the entity's position according to the camera's position
         return entity.rect.move(-self.camera.x, -self.camera.y)
 
-    def update(self, keys):
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+    def update(self, direction):
+        if direction == 'left':
             self.camera.x = max(self.camera.x - self.speed, 0)
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+        elif direction == 'right':
             self.camera.x = min(self.camera.x + self.speed, self.width - screen_width)
-        if keys[pygame.K_UP] or keys[pygame.K_w]:
+        if direction == 'up':
             self.camera.y = max(self.camera.y - self.speed, 0)
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+        elif direction == 'down':
             self.camera.y = min(self.camera.y + self.speed, self.height - screen_height)
 
     def follow_target(self, target):
@@ -285,24 +285,13 @@ class Game:
 
     def update(self):
         # This method will be called by the server to update the game state
-        keys = pygame.key.get_pressed()
-        self.camera.update(keys)  # Or update camera based on other logic
         self.update_bullets()
         self.draw_game_objects()
         pygame.display.flip()
 
-    def run(self):
-        running = True
-        self.create_player(1, "DarkNinja")
-        # TODO: add winning
-        while running:
-            keys = pygame.key.get_pressed()
-            self.camera.update(keys)  # Update camera based on keyboard input
-            running = self.handle_events()
-            self.update_bullets()
-            self.draw_game_objects()
-            pygame.display.flip()
-            pygame.time.Clock().tick(60)
+    def move_camera(self, direction):
+        # Call the camera's update method with the specified direction
+        self.camera.update(direction)
 
     def create_player(self, player_id, character_name):
         x, y = self.find_random_free_position(CHARACTER_WIDTH, CHARACTER_HEIGHT)
@@ -327,8 +316,7 @@ class Game:
         :param character_height: The height of the object to place
         :return: A tuple (x, y) representing the top-left corner of the free area found
         """
-        return 0, 0
-        max_attempts = 1000  # Limit the number of attempts to find a free spot
+        max_attempts = 100  # Limit the number of attempts to find a free spot
         for _ in range(max_attempts):
             x = random.randint(0, MAP_WIDTH - character_width)
             y = random.randint(0, MAP_HEIGHT - character_height)
@@ -471,6 +459,5 @@ def start_game():
     display_end_screen(winning_state)
 
 
-# TODO: remove this line before running skeleton server
 if __name__ == "__main__":
     start_game()

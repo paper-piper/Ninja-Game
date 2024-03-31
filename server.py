@@ -89,12 +89,35 @@ class CommandsServer:
             while not self.action_queue.empty():
                 player_id, action = self.action_queue.get()
                 self.process_action(player_id, action)
+
+            # self.handle_camera_movement()
+
             # Update the game state
-            self.game.update()  # Assuming update method exists in GameLogic.Game
-            # Add a small delay if necessary to control the loop speed
+            self.game.update()
             pygame.time.Clock().tick(60)
 
+    def handle_camera_movement(self):
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+            self.game.move_camera('left')
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+            self.game.move_camera('right')
+        if keys[pygame.K_UP] or keys[pygame.K_w]:
+            self.game.move_camera('up')
+        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+            self.game.move_camera('down')
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+
     def get_character_name(self, client_socket):
+        """
+        get the character name from the client
+        :param client_socket:
+        :return: None
+        """
         # Assuming the client sends character name immediately after connection
         message = self.receive_message(client_socket)
         character_name = message.get("character_name", "Default Character")
