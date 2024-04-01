@@ -5,6 +5,9 @@ import pygame
 SERVER_IP = '127.0.0.1'
 SERVER_PORT = 12345
 
+MOVE_PLAYER = "move"
+SHOOT_PLAYER = "shot"
+CREATE_PLAYER = "player_init"
 
 class GameClient:
     def __init__(self):
@@ -40,6 +43,7 @@ class GameClient:
         Prompt the user to enter a character name.
         :return: The character name chosen by the user
         """
+        return "DarkNinja"
         return input("Enter your character name: ")
 
     def handle_key_events(self):
@@ -65,7 +69,7 @@ class GameClient:
         Send a move action to the server.
         :param direction: The direction to move (e.g., 'up', 'down', 'left', 'right')
         """
-        message = {'type': 'move', 'direction': direction}
+        message = {'type': MOVE_PLAYER, 'direction': direction}
         self.send_message(message)
 
     def send_shoot_action(self, angle):
@@ -96,13 +100,18 @@ class GameClient:
         """
         Start the client, connect to the server, and begin the game loop.
         """
+        pygame.init()
         self.connect_to_server()
         character_name = self.get_character_name()
         self.send_character_init(character_name)
 
+        for _ in range(20):
+            self.send_move_action("right")
+            pygame.time.Clock().tick(120)
         while self.running:
             self.handle_key_events()
             self.receive_game_state()
+
 
 if __name__ == "__main__":
     client = GameClient()

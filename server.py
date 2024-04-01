@@ -39,7 +39,7 @@ player input examples (the first four bytes are saved for length):
 # --------------------------------------- Constants -------------------------------------------------
 MOVE_PLAYER = "move"
 SHOOT_PLAYER = "shot"
-CREATE_PLAYER = "init"
+CREATE_PLAYER = "player_init"
 
 SERVER_IP = '127.0.0.1'
 SERVER_PORT = 12345
@@ -62,19 +62,11 @@ class CommandsServer:
         # Start the game in a separate thread
         Thread(target=self.run_game_loop).start()
         # start listening
+        logger.info(f"Server started, listening on {SERVER_IP}:{SERVER_PORT}")
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server_socket.bind((SERVER_IP, SERVER_PORT))
         server_socket.listen()
-
-        # For testing, create a player and move it around
-        test_player_id = str(uuid.uuid4())
-        self.game.create_player(test_player_id, "DarkNinja")
-        for _ in range(30):
-            self.game.move_player(test_player_id, 'right')
-            time.sleep(0.1)  # Delay to simulate time between moves
-            self.game.move_player(test_player_id, 'down')
-            time.sleep(0.1)
 
         while True:
             client_socket, address = server_socket.accept()
@@ -88,6 +80,7 @@ class CommandsServer:
             # Process actions from the queue
             while not self.action_queue.empty():
                 player_id, action = self.action_queue.get()
+                logger.info(f"Received new action! from player id: {player_id}, action: {action}")
                 self.process_action(player_id, action)
 
             # self.handle_camera_movement()
@@ -124,7 +117,9 @@ class CommandsServer:
         return character_name
 
     def handle_client(self, client_socket, player_id):
+        logger.info(f"New client connected with id: {player_id}")
         init_message = self.receive_message(client_socket)
+        logger.info(f"Client with id: {player_id} send init message: {init_message}")
         self.action_queue.put((player_id, init_message))
         while True:
             try:
@@ -153,6 +148,7 @@ class CommandsServer:
         elif action['type'] == SHOOT_PLAYER:
             self.game.shoot_player(player_id, action['angle'])
         elif action['type'] == CREATE_PLAYER:
+            logger.info(f"Creating new player with name {action['character_name']}")
             self.game.create_player(player_id, action['character_name'])
 
     def cleanup_client(self, player_id, client_socket):

@@ -316,6 +316,7 @@ class Game:
         :param character_height: The height of the object to place
         :return: A tuple (x, y) representing the top-left corner of the free area found
         """
+        return 0,0
         max_attempts = 100  # Limit the number of attempts to find a free spot
         for _ in range(max_attempts):
             x = random.randint(0, MAP_WIDTH - character_width)
