@@ -21,7 +21,7 @@ pil_logger.propagate = False
 # Set up the display
 screen_width = 800
 screen_height = 600
-SCREEN = pygame.display.set_mode((screen_width, screen_height))
+# SCREEN = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Tank Game")
 
 # Images paths
@@ -32,8 +32,8 @@ CHARACTER_STATS_FILE_PATH = "Characters.json"
 MAP_WIDTH = 0
 MAP_HEIGHT = 0
 # Load images
-map_image = pygame.image.load(MAP_IMAGE_PATH).convert_alpha()
-collision_map = pygame.image.load(collision_image_path).convert_alpha()
+# map_image = pygame.image.load(MAP_IMAGE_PATH).convert_alpha()
+# collision_map = pygame.image.load(collision_image_path).convert_alpha()
 
 # player qualities
 player_speed = 4
@@ -140,7 +140,7 @@ class Player:
 
     def draw(self, camera):
         frame = self.sprites[self.direction][self.anim_frame]
-        SCREEN.blit(frame, camera.apply(self))
+        # SCREEN.blit(frame, camera.apply(self))
 
     def move(self, direction):
         dx = dy = 0
@@ -277,8 +277,8 @@ class Game:
     def __init__(self):
         global MAP_WIDTH, MAP_HEIGHT
         MAP_WIDTH, MAP_HEIGHT = get_image_dimensions(MAP_IMAGE_PATH)
-        screen = pygame.display.set_mode((screen_width, screen_height))
-        self.screen = screen
+        # screen = pygame.display.set_mode((screen_width, screen_height))
+        # self.screen = screen
         self.map_width, self.map_height = get_image_dimensions(MAP_IMAGE_PATH)
         self.camera = Camera(self.map_width, self.map_height)
         self.players = {}
@@ -286,8 +286,8 @@ class Game:
     def update(self):
         # This method will be called by the server to update the game state
         self.update_bullets()
-        self.draw_game_objects()
-        pygame.display.flip()
+        #self.draw_game_objects()
+        # pygame.display.flip()
 
     def move_camera(self, direction):
         # Call the camera's update method with the specified direction

@@ -49,9 +49,6 @@ MAP_IMAGE_PATH = r'Images/Map/detailedMap.png'
 collision_image_path = r'Images/Map/UpdatedCollisoin.png'
 CHARACTER_STATS_FILE_PATH = "Characters.json"
 
-map_image = pygame.image.load(MAP_IMAGE_PATH).convert_alpha()
-collision_map = pygame.image.load(collision_image_path).convert_alpha()
-
 
 class CommandsServer:
     def __init__(self):

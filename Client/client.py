@@ -105,7 +105,7 @@ class GameClient:
         character_name = self.get_character_name()
         self.send_character_init(character_name)
 
-        for _ in range(20):
+        for _ in range(2):
             self.send_move_action("right")
             pygame.time.Clock().tick(120)
         while self.running:
