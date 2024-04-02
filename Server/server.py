@@ -8,31 +8,33 @@ import GameLogic
 import logging
 
 # Initialize logger
+logging.basicConfig(
+    filename='server.log',
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s - Line: %(lineno)d',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger("server")
-logger.setLevel(logging.DEBUG)
-file_handler = logging.FileHandler('server.log')
-file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s - Line: %(lineno)d',
-                                            datefmt='%Y-%m-%d %H:%M:%S'))
-logger.addHandler(file_handler)
 # ------------------------------------------ Protocol -----------------------------------------------
 """
-player input examples (the first four bytes are saved for length):
-0016{
-  "type": "player_init",
-  "character_name": "Dark Ninja"
+From Client to Server
+Communication protocol:
+<message length>{
+  "type": "<action type>",
+  "character_name": "<character name>"
 }
-0032{
-  "type": "action",
-  "action": "move",
-  "direction": "up"  // Could be "up", "down", "left", or "right"
-}
-0035{
-  "type": "action",
-  "action": "shoot",
-  "angle": 45.0  // Angle in degrees or radians depending on implementation
-}
+action types (from client to server):
+- player_init
+- move
+- shot
 
-
+action types (from server to client):
+- player_init
+- move
+- shot
+- hit
+- win
+- game status
 """
 
 # --------------------------------------- Constants -------------------------------------------------
@@ -42,6 +44,7 @@ CREATE_PLAYER = "player_init"
 
 SERVER_IP = '127.0.0.1'
 SERVER_PORT = 12345
+id_counter = 0
 clients = {}
 
 MAP_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
@@ -55,6 +58,7 @@ class CommandsServer:
         self.action_queue = Queue()
 
     def start_server(self):
+        global id_counter
         # Start the game in a separate thread
         Thread(target=self.run_game_loop).start()
         # start listening
@@ -66,7 +70,8 @@ class CommandsServer:
 
         while True:
             client_socket, address = server_socket.accept()
-            player_id = str(uuid.uuid4())
+            player_id = id_counter
+            id_counter += 1
 
             # handle client inputs
             Thread(target=self.handle_client, args=(client_socket, player_id)).start()
@@ -149,7 +154,7 @@ class CommandsServer:
 
     def cleanup_client(self, player_id, client_socket):
         client_socket.close()
-        # TODO: remove the player from the gamelogic object
+        self.game.delete_player(player_id)
 
     def broadcast_game_state(self):
         state = self.game.get_game_state()
