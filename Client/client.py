@@ -8,21 +8,28 @@ from queue import Queue
 
 
 logging.basicConfig(
-    filename='server.log',
+    filename='client.log',
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s - Line: %(lineno)d',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-logger = logging.getLogger("server")
+logger = logging.getLogger("client")
 
 SERVER_IP = '127.0.0.1'
 SERVER_PORT = 12345
 
+# Sending Messages
 MOVE_PLAYER = "move"
 SHOOT_PLAYER = "shot"
 CREATE_PLAYER = "player_init"
 
-CHARACTER_NAME = "DarkNinja"
+# Receiving Messages
+PLAYER_ID = 'player_id'
+DIRECTION = 'Direction'
+CHARACTER_NAME = 'Character_name'
+ANGLE = 'Angle'
+
+character = "DarkNinja"
 
 
 class GameClient:
@@ -61,7 +68,7 @@ class GameClient:
         Prompt the user to enter a character name.
         :return: The character name chosen by the user
         """
-        return CHARACTER_NAME
+        return character
 
     def handle_key_events(self):
         """
@@ -133,42 +140,26 @@ class GameClient:
                 logger.info(f"Processing action: {action}")
                 # Example processing logic
                 if action['type'] == MOVE_PLAYER:
-                    self.game.move_player()
+                    self.game.move_player(action[PLAYER_ID], action[DIRECTION])
                 elif action['type'] == SHOOT_PLAYER:
-                    # Handle shoot player action
-                    pass
-
-    def run_game_loop(self):
-        while True:
-            # Process actions from the queue
-            while not self.action_queue.empty():
-                player_id, action = self.action_queue.get()
-                logger.info(f"Received new action! from player id: {player_id}, action: {action}")
-                self.process_action(player_id, action)
-
-            # self.handle_camera_movement()
-
-            # Update the game state
-            self.game.update()
-            pygame.time.Clock().tick(60)
+                    self.game.shoot_player(action[PLAYER_ID], action[ANGLE])
+                elif action['type'] == CREATE_PLAYER:
+                    self.game.create_player(action[PLAYER_ID], action[CHARACTER_NAME])
 
     def start(self):
         """
         Start the client, connect to the server, and begin the game loop.
         """
-        Thread(target=self.run_game_loop).start()
-
         self.connect_to_server()
         character_name = self.get_character_name()
         self.send_character_init(character_name)
 
-        for _ in range(2):
-            self.send_move_action("right")
-            pygame.time.Clock().tick(120)
         while self.running:
             self.handle_key_events()
             self.receive_game_update()
-            pygame.time.delay(50)  # To prevent too rapid execution
+            self.process_action_queue()
+            self.game.update()
+            pygame.time.Clock().tick(60)  # Control the frame rate
 
 
 if __name__ == "__main__":

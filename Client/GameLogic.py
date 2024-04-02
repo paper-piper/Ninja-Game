@@ -25,9 +25,9 @@ SCREEN = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Tank Game")
 
 # Images paths
-MAP_IMAGE_PATH = r'Images/Map/detailedMap.png'
-collision_image_path = r'Images/Map/UpdatedCollisoin.png'
-CHARACTER_STATS_FILE_PATH = "Characters.json"
+MAP_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
+collision_image_path = r'../Assets/Map/UpdatedCollisoin.png'
+CHARACTER_STATS_FILE_PATH = "../Characters.json"
 
 MAP_WIDTH = 0
 MAP_HEIGHT = 0
@@ -85,12 +85,12 @@ class Character:
         self.bullet_damage = bullet_damage
         self.bullet_lifespan = bullet_lifespan
         self.shooting_cooldown = shooting_cooldown
-        self.bullet_image = pygame.image.load(f'Images/Characters/{name}/Weapon.png').convert_alpha()
-        self.faceset = pygame.image.load(f'Images/Characters/{name}/Faceset.png').convert_alpha()
+        self.bullet_image = pygame.image.load(f'../Assets/Characters/{name}/Weapon.png').convert_alpha()
+        self.faceset = pygame.image.load(f'../Assets/Characters/{name}/Faceset.png').convert_alpha()
         self.sprites = self.load_sprites(name)
 
     def load_sprites(self, name):
-        sprite_sheet = pygame.image.load(f'Images/Characters/{name}/SeparateAnim/Walk.png').convert_alpha()
+        sprite_sheet = pygame.image.load(f'../Assets/Characters/{name}/SeparateAnim/Walk.png').convert_alpha()
         sprites = {
             'down': [],
             'up': [],

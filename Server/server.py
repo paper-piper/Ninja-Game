@@ -83,6 +83,7 @@ class CommandsServer:
                 player_id, action = self.action_queue.get()
                 logger.info(f"Received new action! from player id: {player_id}, action: {action}")
                 self.process_action(player_id, action)
+                self.broadcast_game_action(player_id, action)
 
             # self.handle_camera_movement()
 
@@ -156,10 +157,11 @@ class CommandsServer:
         client_socket.close()
         self.game.delete_player(player_id)
 
-    def broadcast_game_state(self):
-        state = self.game.get_game_state()
-        for player_id, client_socket in self.game.players.items():
-            self.send_message(client_socket, state)
+    def broadcast_game_action(self, player_id, action):
+        for client_id, client_socket in self.game.players.items():
+            action_with_id = action.copy()
+            action_with_id['player_id'] = player_id
+            self.send_message(client_socket, action_with_id)
 
     def send_message(self, client_socket, message):
         message_json = json.dumps(message)
