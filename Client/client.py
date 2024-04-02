@@ -9,6 +9,7 @@ MOVE_PLAYER = "move"
 SHOOT_PLAYER = "shot"
 CREATE_PLAYER = "player_init"
 
+
 class GameClient:
     def __init__(self):
         """

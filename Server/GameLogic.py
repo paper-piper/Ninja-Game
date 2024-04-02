@@ -22,18 +22,19 @@ pil_logger.propagate = False
 screen_width = 800
 screen_height = 600
 # SCREEN = pygame.display.set_mode((screen_width, screen_height))
+
 pygame.display.set_caption("Tank Game")
 
-# Images paths
-MAP_IMAGE_PATH = r'Images/Map/detailedMap.png'
-collision_image_path = r'Images/Map/UpdatedCollisoin.png'
-CHARACTER_STATS_FILE_PATH = "Characters.json"
+# Assets paths
+MAP_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
+collision_image_path = r'../Assets/Map/UpdatedCollisoin.png'
+CHARACTER_STATS_FILE_PATH = "../Characters.json"
 
 MAP_WIDTH = 0
 MAP_HEIGHT = 0
 # Load images
 # map_image = pygame.image.load(MAP_IMAGE_PATH).convert_alpha()
-# collision_map = pygame.image.load(collision_image_path).convert_alpha()
+collision_map = Image.open('../Assets/Map/UpdatedCollisoin.png')
 
 # player qualities
 player_speed = 4
@@ -85,31 +86,6 @@ class Character:
         self.bullet_damage = bullet_damage
         self.bullet_lifespan = bullet_lifespan
         self.shooting_cooldown = shooting_cooldown
-        self.bullet_image = pygame.image.load(f'Images/Characters/{name}/Weapon.png').convert_alpha()
-        self.faceset = pygame.image.load(f'Images/Characters/{name}/Faceset.png').convert_alpha()
-        self.sprites = self.load_sprites(name)
-
-    def load_sprites(self, name):
-        sprite_sheet = pygame.image.load(f'Images/Characters/{name}/SeparateAnim/Walk.png').convert_alpha()
-        sprites = {
-            'down': [],
-            'up': [],
-            'left': [],
-            'right': []
-        }
-        original_sprite_size = 16  # Original size of the sprite
-        scaled_sprite_size = 32  # New size of the sprite after scaling
-
-        for col, direction in enumerate(sprites.keys()):
-            for row in range(4):  # Assuming 4 frames per direction
-                # Extract the original frame from the sprite sheet
-                original_frame = sprite_sheet.subsurface(col * original_sprite_size, row * original_sprite_size,
-                                                         original_sprite_size, original_sprite_size)
-                # Scale the frame
-                scaled_frame = pygame.transform.scale(original_frame, (scaled_sprite_size, scaled_sprite_size))
-                sprites[direction].append(scaled_frame)
-
-        return sprites
 
 
 class Player:
@@ -133,14 +109,8 @@ class Player:
         self.speed = character.speed
         self.hp = character.hp
         self.bullet_speed = character.bullet_speed
-        self.bullet_image = character.bullet_image
-        self.sprites = character.sprites
         self.bullet_damage = character.bullet_damage
         self.shooting_cooldown = character.shooting_cooldown
-
-    def draw(self, camera):
-        frame = self.sprites[self.direction][self.anim_frame]
-        # SCREEN.blit(frame, camera.apply(self))
 
     def move(self, direction):
         dx = dy = 0
@@ -200,8 +170,7 @@ class Player:
                 3,
                 self.bullet_damage,
                 self,
-                self.shooting_cooldown,
-                self.bullet_image)
+                self.shooting_cooldown)
             )
 
     def take_damage(self, damage):
@@ -212,7 +181,7 @@ class Player:
 
 
 class Bullet:
-    def __init__(self, x, y, dx, dy, radius, damage, owner, lifespan, sprite_sheet, frames_number=2):
+    def __init__(self, x, y, dx, dy, radius, damage, owner, lifespan):
         self.x = x
         self.y = y
         self.dx = dx
@@ -225,25 +194,7 @@ class Bullet:
         self.anim_speed = 10  # You can adjust this to make the animation faster or slower
         self.anim_count = 0
 
-        # If a sprite sheet path is provided, load it; otherwise, create a surface and draw a circle on it.
-        if sprite_sheet:
-            self.sprites = self.load_bullet_sprites(sprite_sheet, frames_number)
-            self.image = self.sprites[self.anim_frame]  # Start with the first frame
-        else:
-            self.image = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
-            pygame.draw.circle(self.image, (0, 0, 0), (radius, radius), radius)
-
         self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
-
-    def load_bullet_sprites(self, sprite_sheet, frames_number):
-        frames = []  # Assuming that frames are laid out horizontally
-        frame_width = sprite_sheet.get_width() // frames_number
-        for i in range(frames_number):
-            frame = sprite_sheet.subsurface(i * frame_width, 0, frame_width, sprite_sheet.get_height())
-            scaled_frame = pygame.transform.scale(frame, (frame_width * 2, frame_width * 2))
-
-            frames.append(scaled_frame)
-        return frames
 
     def move(self):
         self.lifespan -= 1  # Decrease lifespan each frame
@@ -258,19 +209,7 @@ class Bullet:
         self.rect.x = self.x - self.radius
         self.rect.y = self.y - self.radius
 
-        # Update animation
-        self.anim_count += 1
-        if self.anim_count >= self.anim_speed:
-            self.anim_frame = (self.anim_frame + 1) % len(self.sprites)
-            self.anim_count = 0
-            self.image = self.sprites[self.anim_frame]  # Update the image to the next frame
         return did_collide
-
-    def draw(self, camera):
-        if self.image:
-            SCREEN.blit(self.image, camera.apply(self).topleft)
-        else:
-            pygame.draw.circle(SCREEN, (0, 0, 0), camera.apply(self).center, self.radius)
 
 
 class Game:
@@ -316,7 +255,7 @@ class Game:
         :param character_height: The height of the object to place
         :return: A tuple (x, y) representing the top-left corner of the free area found
         """
-        return 0,0
+        return 0, 0
         max_attempts = 100  # Limit the number of attempts to find a free spot
         for _ in range(max_attempts):
             x = random.randint(0, MAP_WIDTH - character_width)
@@ -364,29 +303,6 @@ class Game:
                 player.take_damage(bullet.damage)
                 return True  # Bullet hit a player
         return False  # No hit detected
-
-    def draw_game_objects(self):
-        self.screen.fill((255, 255, 255))
-        map_offset_x = -self.camera.camera.x
-        map_offset_y = -self.camera.camera.y
-        self.screen.blit(map_image, (map_offset_x, map_offset_y))
-        for player in self.players.values():
-            player.draw(self.camera)
-            for bullet in player.bullets:
-                bullet.draw(self.camera)
-
-
-def display_end_screen(result):
-    font = pygame.font.SysFont("Arial", 48)
-    if result == "Win":
-        message = "You Win!"
-    else:
-        message = "You Lose!"
-    text = font.render(message, True, (0, 0, 0))
-    SCREEN.fill((255, 255, 255))
-    SCREEN.blit(text, (screen_width // 2 - text.get_width() // 2, screen_height // 2 - text.get_height() // 2))
-    pygame.display.flip()
-    pygame.time.wait(300)  # Wait 3 seconds before closing or restarting the game
 
 
 def load_character_from_json(file_path, name):
@@ -443,22 +359,7 @@ def check_collision(x, y, width, height):
 def is_colliding_at(x, y):
     int_x = int(x)
     int_y = int(y)
-    pixel_color = collision_map.get_at((int_x, int_y))
-    alpha = pixel_color[3]
+    pixel_color = collision_map.getpixel((int_x, int_y))
+    # Assuming the image has an alpha channel, the alpha value will be the 4th element
+    alpha = pixel_color[3] if len(pixel_color) == 4 else 255  # Assuming opaque if no alpha channel
     return not alpha == 0
-
-
-def start_game():
-    global MAP_WIDTH, MAP_HEIGHT, SCREEN
-    pygame.init()
-    SCREEN = pygame.display.set_mode((screen_width, screen_height))
-    pygame.display.set_caption("Ninja Game")
-    MAP_WIDTH, MAP_HEIGHT = get_image_dimensions(MAP_IMAGE_PATH)
-    game = Game()
-    game.run()
-    winning_state = True
-    display_end_screen(winning_state)
-
-
-if __name__ == "__main__":
-    start_game()

@@ -1,6 +1,5 @@
 import socket
 import json
-import time
 import uuid
 import pygame
 from threading import Thread
@@ -45,9 +44,9 @@ SERVER_IP = '127.0.0.1'
 SERVER_PORT = 12345
 clients = {}
 
-MAP_IMAGE_PATH = r'Images/Map/detailedMap.png'
-collision_image_path = r'Images/Map/UpdatedCollisoin.png'
-CHARACTER_STATS_FILE_PATH = "Characters.json"
+MAP_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
+collision_image_path = r'../Assets/Map/UpdatedCollisoin.png'
+CHARACTER_STATS_FILE_PATH = "../Characters.json"
 
 
 class CommandsServer:
