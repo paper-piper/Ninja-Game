@@ -19,17 +19,15 @@ logger = logging.getLogger("client")
 SERVER_IP = '127.0.0.1'
 SERVER_PORT = 12345
 
-# Sending Messages
-ACTION_PARAMETERS = "action_parameters"
+# Client actions
 MOVE_PLAYER = "move"
 SHOOT_PLAYER = "shot"
 CREATE_PLAYER = "player_init"
 
-# Receiving Messages
+# Server response keys
+ACTION_TYPE = 'type'
+ACTION_PARAMETERS = 'action_parameters'
 PLAYER_ID = 'player_id'
-DIRECTION = 'Direction'
-CHARACTER_NAME = 'Character_name'
-ANGLE = 'Angle'
 
 character = "DarkNinja"
 
@@ -62,7 +60,7 @@ class GameClient:
         Send the initial character choice to the server.
         :param character_name: The name of the character chosen by the user
         """
-        message = {'type': CREATE_PLAYER, 'character_name': character_name}
+        message = {'type': CREATE_PLAYER, 'action_parameter': character_name}
         self.send_message(message)
 
     def get_character_name(self):
@@ -85,8 +83,6 @@ class GameClient:
             self.send_move_action('up')
         elif keys[pygame.K_DOWN]:
             self.send_move_action('down')
-
-        # Example shooting action on space key press
         if keys[pygame.K_SPACE]:
             self.send_shoot_action(45)  # Example angle
 
@@ -95,7 +91,7 @@ class GameClient:
         Send a move action to the server.
         :param direction: The direction to move (e.g., 'up', 'down', 'left', 'right')
         """
-        message = {'type': MOVE_PLAYER, 'direction': direction}
+        message = {'type': MOVE_PLAYER, 'action_parameter': direction}
         self.send_message(message)
 
     def send_shoot_action(self, angle):
@@ -103,7 +99,7 @@ class GameClient:
         Send a shoot action to the server.
         :param angle: The angle at which to shoot
         """
-        message = {'type': SHOOT_PLAYER, 'angle': angle}
+        message = {'type': SHOOT_PLAYER, 'action_parameter': angle}
         self.send_message(message)
 
     def send_message(self, message):
@@ -138,21 +134,18 @@ class GameClient:
         while self.running:
             if not self.action_queue.empty():
                 action = self.action_queue.get()
-                action_parameters = ast.literal_eval(action[ACTION_PARAMETERS])
-                # Process the action received from the server
-                logger.info(f"Processing action: {action}")
-                # Example processing logic
-                if action['type'] == MOVE_PLAYER:
-                    self.game.move_player(action[PLAYER_ID], action_parameters[0])
-                elif action['type'] == SHOOT_PLAYER:
-                    self.game.shoot_player(action[PLAYER_ID], action_parameters[0])
-                elif action['type'] == CREATE_PLAYER:
-                    self.game.create_player(
-                        action[PLAYER_ID],
-                        action_parameters[0],
-                        action_parameters[1],
-                        action_parameters[2],
-                    )
+                action_type = action.get(ACTION_TYPE)
+                action_parameters = action.get(ACTION_PARAMETERS, [])
+                player_id = action.get(PLAYER_ID)
+
+                if action_type == CREATE_PLAYER:
+                    # Handle player creation
+                    if player_id != '0':  # We already crated the player of the client itself
+                        self.game.create_player(player_id, *action_parameters)
+                elif action_type == MOVE_PLAYER:
+                    self.game.move_player(player_id, *action_parameters)
+                elif action_type == SHOOT_PLAYER:
+                    self.game.shoot_player(player_id, *action_parameters)
 
     def start(self):
         """

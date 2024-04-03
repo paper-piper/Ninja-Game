@@ -15,47 +15,29 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 logger = logging.getLogger("server")
-# ------------------------------------------ Protocol -----------------------------------------------
-"""
-From Client to Server
-Communication protocol:
-<message length>{
-  "type": "<action type>",
-  "character_name": "<character name>"
-}
-action types (from client to server):
-- player_init
-- move
-- shot
 
-action types (from server to client):
-- player_init
-- move
-- shot
-- hit
-- win
-- game status
-"""
 
 # --------------------------------------- Constants -------------------------------------------------
-MOVE_PLAYER = "move"
-SHOOT_PLAYER = "shot"
-CREATE_PLAYER = "player_init"
 
 SERVER_IP = '127.0.0.1'
 SERVER_PORT = 12345
-id_counter = 1  # starts from 1, since id zero is saved for acknowledge messages
-clients = {}
 
-MAP_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
-collision_image_path = r'../Assets/Map/UpdatedCollision.png'
-CHARACTER_STATS_FILE_PATH = "../Characters.json"
+# Server actions
+MOVE_PLAYER = "move"
+SHOOT_PLAYER = "shot"
+CREATE_PLAYER = "player_init"
+PLAYER_INIT = "player_init"
+HIT_PLAYER = "hit"
+WIN_PLAYER = "win"
+
+id_counter = 1  # starts from 1, since id zero is saved for acknowledge messages
 
 
 class CommandsServer:
     def __init__(self):
         self.game = GameLogic.Game()
         self.action_queue = Queue()
+        self.clients = {}
 
     def start_server(self):
         global id_counter
@@ -72,22 +54,17 @@ class CommandsServer:
             client_socket, address = server_socket.accept()
             player_id = id_counter
             id_counter += 1
+            self.clients[player_id] = client_socket
 
             # handle client inputs
             Thread(target=self.handle_client, args=(client_socket, player_id)).start()
 
     def run_game_loop(self):
         while True:
-            # Process actions from the queue
             while not self.action_queue.empty():
                 player_id, action = self.action_queue.get()
-                logger.info(f"Received new action! from player id: {player_id}, action: {action}")
                 self.process_action(player_id, action)
-                self.broadcast_game_action(player_id, action)
 
-            # self.handle_camera_movement()
-
-            # Update the game state
             self.game.update()
             pygame.time.Clock().tick(60)
 
@@ -103,55 +80,42 @@ class CommandsServer:
         return character_name
 
     def handle_client(self, client_socket, player_id):
-        logger.info(f"New client connected with id: {player_id}")
-        init_message = self.receive_message(client_socket)
-        logger.info(f"Client with id: {player_id} send init message: {init_message}")
-        self.action_queue.put((player_id, init_message))
-        while True:
-            try:
+        try:
+            while True:
                 message = self.receive_message(client_socket)
                 if message:
                     self.action_queue.put((player_id, message))
-            except Exception as e:
-                print(f"Error handling client {player_id}: {e}")
-                break
-        self.cleanup_client(player_id, client_socket)
+        except Exception as e:
+            logger.error(f"Error handling client {player_id}: {e}")
+        finally:
+            self.cleanup_client(player_id)
 
     def process_action(self, player_id, action):
-        """
-        json message example:
-        {
-          "type": "move_player",
-          "character_name": "Dark Ninja"
-        }
-        :param player_id:
-        :param action:
-        :return:
-        """
-        # Process the action (move, shoot, etc.) using the game logic
-        if action['type'] == MOVE_PLAYER:
-            self.game.move_player(player_id, action['direction'])
-        elif action['type'] == SHOOT_PLAYER:
-            self.game.shoot_player(player_id, action['angle'])
-        elif action['type'] == CREATE_PLAYER:
-            logger.info(f"Creating new player with name {action['character_name']}")
-            self.game.create_player(player_id, action['character_name'])
+        action_type = action['type']
+        if action_type == MOVE_PLAYER:
+            self.game.move_player(player_id, action['action_parameter'])
+        elif action_type == SHOOT_PLAYER:
+            self.game.shoot_player(player_id, action['action_parameter'])
+        elif action_type == CREATE_PLAYER:
+            self.game.create_player(player_id, action['action_parameter'])
+            self.broadcast_game_action(player_id, {'type': PLAYER_INIT, 'action_parameters': [action['action_parameter'], 20, 30]})
 
-    def cleanup_client(self, player_id, client_socket):
-        client_socket.close()
-        self.game.delete_player(player_id)
+    def cleanup_client(self, player_id):
+        if player_id in self.clients:
+            self.clients[player_id].close()
+            del self.clients[player_id]
+            self.game.delete_player(player_id)
 
     def broadcast_game_action(self, player_id, action):
-        for client_id, client_socket in self.game.players.items():
+        for cid, client_socket in self.clients.items():
             action_with_id = action.copy()
-            action_with_id['player_id'] = player_id
+            action_with_id['player_id'] = '0' if cid == player_id else player_id
             self.send_message(client_socket, action_with_id)
 
     def send_message(self, client_socket, message):
         message_json = json.dumps(message)
         message_length = len(message_json)
-        header = message_length.to_bytes(4, byteorder='big')
-        client_socket.sendall(header + message_json.encode())
+        client_socket.sendall(message_length.to_bytes(4, byteorder='big') + message_json.encode())
 
     def receive_message(self, client_socket):
         header = client_socket.recv(4)
@@ -172,4 +136,5 @@ class CommandsServer:
 
 if __name__ == "__main__":
     cmd_server = CommandsServer()
+    Thread(target=cmd_server.run_game_loop).start()
     cmd_server.start_server()
