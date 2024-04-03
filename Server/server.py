@@ -44,11 +44,11 @@ CREATE_PLAYER = "player_init"
 
 SERVER_IP = '127.0.0.1'
 SERVER_PORT = 12345
-id_counter = 0
+id_counter = 1  # starts from 1, since id zero is saved for acknowledge messages
 clients = {}
 
 MAP_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
-collision_image_path = r'../Assets/Map/UpdatedCollisoin.png'
+collision_image_path = r'../Assets/Map/UpdatedCollision.png'
 CHARACTER_STATS_FILE_PATH = "../Characters.json"
 
 
@@ -90,22 +90,6 @@ class CommandsServer:
             # Update the game state
             self.game.update()
             pygame.time.Clock().tick(60)
-
-    def handle_camera_movement(self):
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            self.game.move_camera('left')
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            self.game.move_camera('right')
-        if keys[pygame.K_UP] or keys[pygame.K_w]:
-            self.game.move_camera('up')
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            self.game.move_camera('down')
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                exit()
 
     def get_character_name(self, client_socket):
         """

@@ -3,6 +3,7 @@ import json
 import pygame
 import GameLogic
 from threading import Thread
+import ast
 import logging
 from queue import Queue
 
@@ -19,6 +20,7 @@ SERVER_IP = '127.0.0.1'
 SERVER_PORT = 12345
 
 # Sending Messages
+ACTION_PARAMETERS = "action_parameters"
 MOVE_PLAYER = "move"
 SHOOT_PLAYER = "shot"
 CREATE_PLAYER = "player_init"
@@ -37,7 +39,7 @@ class GameClient:
         """
         Initialize the client with the server's IP address and port.
         """
-        self.game = GameLogic.Game()
+        self.game = GameLogic.Game(character)
         self.server_ip = SERVER_IP
         self.server_port = SERVER_PORT
         self.client_socket = None
@@ -136,15 +138,21 @@ class GameClient:
         while self.running:
             if not self.action_queue.empty():
                 action = self.action_queue.get()
+                action_parameters = ast.literal_eval(action[ACTION_PARAMETERS])
                 # Process the action received from the server
                 logger.info(f"Processing action: {action}")
                 # Example processing logic
                 if action['type'] == MOVE_PLAYER:
-                    self.game.move_player(action[PLAYER_ID], action[DIRECTION])
+                    self.game.move_player(action[PLAYER_ID], action_parameters[0])
                 elif action['type'] == SHOOT_PLAYER:
-                    self.game.shoot_player(action[PLAYER_ID], action[ANGLE])
+                    self.game.shoot_player(action[PLAYER_ID], action_parameters[0])
                 elif action['type'] == CREATE_PLAYER:
-                    self.game.create_player(action[PLAYER_ID], action[CHARACTER_NAME])
+                    self.game.create_player(
+                        action[PLAYER_ID],
+                        action_parameters[0],
+                        action_parameters[1],
+                        action_parameters[2],
+                    )
 
     def start(self):
         """

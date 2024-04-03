@@ -26,7 +26,7 @@ pygame.display.set_caption("Tank Game")
 
 # Images paths
 MAP_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
-collision_image_path = r'../Assets/Map/UpdatedCollisoin.png'
+collision_image_path = r'../Assets/Map/UpdatedCollision.png'
 CHARACTER_STATS_FILE_PATH = "../Characters.json"
 
 MAP_WIDTH = 0
@@ -40,6 +40,7 @@ player_speed = 4
 CHARACTER_WIDTH = 32
 CHARACTER_HEIGHT = 32
 SHOOTING_CHANCE = 0.05
+
 
 
 class Camera:
@@ -274,30 +275,34 @@ class Bullet:
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, character_name):
         global MAP_WIDTH, MAP_HEIGHT
         MAP_WIDTH, MAP_HEIGHT = get_image_dimensions(MAP_IMAGE_PATH)
         screen = pygame.display.set_mode((screen_width, screen_height))
         self.screen = screen
         self.map_width, self.map_height = get_image_dimensions(MAP_IMAGE_PATH)
         self.camera = Camera(self.map_width, self.map_height)
-        self.players = {}
+
+        character = load_character_from_json(character_name)
+        self.player = Player(
+            character,
+            x=self.map_width // 2,
+            y=self.map_height - CHARACTER_HEIGHT * 2,
+            width=CHARACTER_WIDTH,
+            height=CHARACTER_HEIGHT
+        )
+
+        self.players = {0: self.player}
 
     def update(self):
         # This method will be called by the server to update the game state
         self.update_bullets()
         self.draw_game_objects()
         pygame.display.flip()
+        self.camera.update(self.player)
 
-    def move_camera(self, direction):
-        # Call the camera's update method with the specified direction
-        self.camera.update(direction)
-
-    def create_player(self, player_id, character_name):
-        x, y = self.find_random_free_position(CHARACTER_WIDTH, CHARACTER_HEIGHT)
-        if not x:
-            logger.error("Didn't found any x,y for the player to be created")
-        character = load_character_from_json(CHARACTER_STATS_FILE_PATH, character_name)
+    def create_player(self, player_id, character_name, x, y):
+        character = load_character_from_json(character_name)
         player = Player(
             character,
             x,
@@ -307,26 +312,6 @@ class Game:
         )
         self.players[player_id] = player
         logger.info(f"Created new player ({character_name}) in x = {x}, y = {y}")
-
-    def find_random_free_position(self, character_width, character_height):
-        """
-        Find a random position within the map where an object of the given size can be placed without collision.
-
-        :param character_width: The width of the object to place
-        :param character_height: The height of the object to place
-        :return: A tuple (x, y) representing the top-left corner of the free area found
-        """
-        return 0,0
-        max_attempts = 100  # Limit the number of attempts to find a free spot
-        for _ in range(max_attempts):
-            x = random.randint(0, MAP_WIDTH - character_width)
-            y = random.randint(0, MAP_HEIGHT - character_height)
-
-            if check_collision(x, y, character_width, character_height):
-                return x, y  # Found a free spot
-
-        # If no free spot is found after max_attempts, return None or raise an error
-        return None
 
     def delete_player(self, player_id):
         if player_id in self.players:
@@ -389,8 +374,8 @@ def display_end_screen(result):
     pygame.time.wait(300)  # Wait 3 seconds before closing or restarting the game
 
 
-def load_character_from_json(file_path, name):
-    with open(file_path, 'r') as file:
+def load_character_from_json(name):
+    with open(CHARACTER_STATS_FILE_PATH, 'r') as file:
         data = json.load(file)
 
     for char_data in data['characters']:
