@@ -45,16 +45,29 @@ SHOOTING_CHANCE = 0.05
 
 class Camera:
     def __init__(self, width, height):
+        """
+        Initialize the camera with the given width and height of the view.
+        :param width: Width of the camera view
+        :param height: Height of the camera view
+        """
         self.camera = pygame.Rect(0, 0, screen_width, screen_height)
         self.width = width
         self.height = height
         self.speed = 5  # Camera movement speed
 
     def apply(self, entity):
-        # Move the entity's position according to the camera's position
+        """
+        Adjust the entity's position based on the camera's current position.
+        :param entity: The entity to which the camera's position will be applied
+        :return: The adjusted position of the entity
+        """
         return entity.rect.move(-self.camera.x, -self.camera.y)
 
     def update(self, direction):
+        """
+        Update the camera's position based on the given direction.
+        :param direction: The direction to move the camera ('left', 'right', 'up', 'down')
+        """
         if direction == 'left':
             self.camera.x = max(self.camera.x - self.speed, 0)
         elif direction == 'right':
@@ -65,6 +78,10 @@ class Camera:
             self.camera.y = min(self.camera.y + self.speed, self.height - screen_height)
 
     def follow_target(self, target):
+        """
+        Make the camera follow the target entity.
+        :param target: The target entity that the camera should follow
+        """
         x = -target.rect.x + int(screen_width / 2)
         y = -target.rect.y + int(screen_height / 2)
 
@@ -276,21 +293,35 @@ class Bullet:
 
 class Game:
     def __init__(self):
-        global MAP_WIDTH, MAP_HEIGHT
-        MAP_WIDTH, MAP_HEIGHT = get_image_dimensions(MAP_IMAGE_PATH)
-        screen = pygame.display.set_mode((screen_width, screen_height))
-        self.screen = screen
-        self.map_width, self.map_height = get_image_dimensions(MAP_IMAGE_PATH)
-        self.camera = Camera(self.map_width, self.map_height)
-        self.player = None
-        self.players = {}
+        """
+        Initialize the game, setting up the map, camera, and player entities.
+        """
+        try:
+            global MAP_WIDTH, MAP_HEIGHT
+            MAP_WIDTH, MAP_HEIGHT = get_image_dimensions(MAP_IMAGE_PATH)
+            self.screen = pygame.display.set_mode((screen_width, screen_height))
+            self.map_width, self.map_height = MAP_WIDTH, MAP_HEIGHT
+            self.camera = Camera(self.map_width, self.map_height)
+            self.players = {}
+            self.player = None
+        except Exception as e:
+            logger.error(f"Game initialization error: {e}")
 
     def update(self):
-        # This method will be called by the server to update the game state
-        self.update_bullets()
-        self.draw_game_objects()
-        pygame.display.flip()
-        self.camera.update(self.player)
+        """
+        Update the game state, including moving bullets and drawing game objects.
+        """
+        try:
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_a]:
+                print("WhooHoo!")
+            self.update_bullets()
+            self.draw_game_objects()
+            pygame.display.flip()
+            if self.player:
+                self.camera.update(self.player)
+        except Exception as e:
+            logger.error(f"Error updating game state: {e}")
 
     def create_player(self, player_id, character_name, x, y):
         """
@@ -326,7 +357,11 @@ class Game:
         if player_id in self.players:
             self.players[player_id].shoot(angle)
 
-    def handle_events(self):
+    def check_for_quit(self):
+        """
+        checks for quiting game
+        :return:
+        """
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return False
@@ -352,14 +387,20 @@ class Game:
         return False  # No hit detected
 
     def draw_game_objects(self):
-        self.screen.fill((255, 255, 255))
-        map_offset_x = -self.camera.camera.x
-        map_offset_y = -self.camera.camera.y
-        self.screen.blit(map_image, (map_offset_x, map_offset_y))
-        for player in self.players.values():
-            player.draw(self.camera)
-            for bullet in player.bullets:
-                bullet.draw(self.camera)
+        """
+        Draw all game objects, including players and bullets, to the screen.
+        """
+        try:
+            self.screen.fill((255, 255, 255))
+            map_offset_x = -self.camera.camera.x
+            map_offset_y = -self.camera.camera.y
+            self.screen.blit(map_image, (map_offset_x, map_offset_y))
+            for player in self.players.values():
+                player.draw(self.camera)
+                for bullet in player.bullets:
+                    bullet.draw(self.camera)
+        except Exception as e:
+            logger.error(f"Error drawing game objects: {e}")
 
 
 def display_end_screen(result):
@@ -376,25 +417,43 @@ def display_end_screen(result):
 
 
 def load_character_from_json(name):
-    with open(CHARACTER_STATS_FILE_PATH, 'r') as file:
-        data = json.load(file)
-
-    for char_data in data['characters']:
-        if char_data['name'] == name:
-            return Character(
-                name=char_data['name'],
-                hp=char_data['hp'],
-                speed=char_data['speed'],
-                bullet_speed=char_data['bullet_speed'],
-                bullet_damage=char_data['bullet_damage'],
-                bullet_lifespan=char_data['bullet_lifespan'],
-                shooting_cooldown=char_data['shooting_cooldown']
-            )
-
-    raise ValueError(f"No character found with the name {name}")
+    """
+    Load character data from a JSON file.
+    :param name: The name of the character to load
+    :return: A Character object
+    """
+    try:
+        with open(CHARACTER_STATS_FILE_PATH, 'r') as file:
+            data = json.load(file)
+        for char_data in data['characters']:
+            if char_data['name'] == name:
+                return Character(
+                    name=char_data['name'],
+                    hp=char_data['hp'],
+                    speed=char_data['speed'],
+                    bullet_speed=char_data['bullet_speed'],
+                    bullet_damage=char_data['bullet_damage'],
+                    bullet_lifespan=char_data['bullet_lifespan'],
+                    shooting_cooldown=char_data['shooting_cooldown']
+                )
+        raise ValueError(f"No character found with the name {name}")
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON Decode Error: {e}")
+        raise
+    except FileNotFoundError as e:
+        logger.error(f"File not found: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Error loading character data: {e}")
+        raise
 
 
 def get_image_dimensions(image_path):
+    """
+    Get the dimensions of an image.
+    :param image_path: Path to the image file
+    :return: A tuple containing the width and height of the image
+    """
     with Image.open(image_path) as img:
         width, height = img.size
     return width, height
