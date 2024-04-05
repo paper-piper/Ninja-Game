@@ -387,7 +387,7 @@ class Game:
         ai_character = load_character_from_json(CHARACTER_STATS_FILE_PATH, ai_character_name)
         self.ai_player = RemotePlayer(
             ai_character,
-            x=self.map_width // 2 - 70, # give some space to other player
+            x=self.map_width // 2 - 70,  # give some space to other player
             y=self.map_height - CHARACTER_SIZE * 2,
             width=CHARACTER_SIZE,
             height=CHARACTER_SIZE,

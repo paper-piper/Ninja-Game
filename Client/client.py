@@ -37,7 +37,7 @@ class GameClient:
         """
         Initialize the client with the server's IP address and port.
         """
-        self.game = GameLogic.Game(character)
+        self.game = GameLogic.Game()
         self.server_ip = SERVER_IP
         self.server_port = SERVER_PORT
         self.client_socket = None
@@ -131,26 +131,24 @@ class GameClient:
             logger.error(f"Error receiving game state: {e}")
 
     def process_action_queue(self):
-        while self.running:
-            if not self.action_queue.empty():
-                action = self.action_queue.get()
-                action_type = action.get(ACTION_TYPE)
-                action_parameters = action.get(ACTION_PARAMETERS, [])
-                player_id = action.get(PLAYER_ID)
+        while not self.action_queue.empty():
+            action = self.action_queue.get()
+            action_type = action.get(ACTION_TYPE)
+            action_parameters = action.get(ACTION_PARAMETERS, [])
+            player_id = action.get(PLAYER_ID)
 
-                if action_type == CREATE_PLAYER:
-                    # Handle player creation
-                    if player_id != '0':  # We already crated the player of the client itself
-                        self.game.create_player(player_id, *action_parameters)
-                elif action_type == MOVE_PLAYER:
-                    self.game.move_player(player_id, *action_parameters)
-                elif action_type == SHOOT_PLAYER:
-                    self.game.shoot_player(player_id, *action_parameters)
+            if action_type == CREATE_PLAYER:
+                self.game.create_player(player_id, *action_parameters)
+            elif action_type == MOVE_PLAYER:
+                self.game.move_player(player_id, *action_parameters)
+            elif action_type == SHOOT_PLAYER:
+                self.game.shoot_player(player_id, *action_parameters)
 
     def start(self):
         """
         Start the client, connect to the server, and begin the game loop.
         """
+        pygame.init()  # Ensure pygame is initialized
         self.connect_to_server()
         character_name = self.get_character_name()
         self.send_character_init(character_name)

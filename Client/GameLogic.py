@@ -275,24 +275,15 @@ class Bullet:
 
 
 class Game:
-    def __init__(self, character_name):
+    def __init__(self):
         global MAP_WIDTH, MAP_HEIGHT
         MAP_WIDTH, MAP_HEIGHT = get_image_dimensions(MAP_IMAGE_PATH)
         screen = pygame.display.set_mode((screen_width, screen_height))
         self.screen = screen
         self.map_width, self.map_height = get_image_dimensions(MAP_IMAGE_PATH)
         self.camera = Camera(self.map_width, self.map_height)
-
-        character = load_character_from_json(character_name)
-        self.player = Player(
-            character,
-            x=self.map_width // 2,
-            y=self.map_height - CHARACTER_HEIGHT * 2,
-            width=CHARACTER_WIDTH,
-            height=CHARACTER_HEIGHT
-        )
-
-        self.players = {0: self.player}
+        self.player = None
+        self.players = {}
 
     def update(self):
         # This method will be called by the server to update the game state
@@ -302,6 +293,14 @@ class Game:
         self.camera.update(self.player)
 
     def create_player(self, player_id, character_name, x, y):
+        """
+        player id 0 means itself
+        :param player_id:
+        :param character_name:
+        :param x:
+        :param y:
+        :return:
+        """
         character = load_character_from_json(character_name)
         player = Player(
             character,
@@ -311,6 +310,8 @@ class Game:
             CHARACTER_HEIGHT
         )
         self.players[player_id] = player
+        if player_id == '0':
+            self.player = player
         logger.info(f"Created new player ({character_name}) in x = {x}, y = {y}")
 
     def delete_player(self, player_id):
@@ -431,19 +432,3 @@ def is_colliding_at(x, y):
     pixel_color = collision_map.get_at((int_x, int_y))
     alpha = pixel_color[3]
     return not alpha == 0
-
-
-def start_game():
-    global MAP_WIDTH, MAP_HEIGHT, SCREEN
-    pygame.init()
-    SCREEN = pygame.display.set_mode((screen_width, screen_height))
-    pygame.display.set_caption("Ninja Game")
-    MAP_WIDTH, MAP_HEIGHT = get_image_dimensions(MAP_IMAGE_PATH)
-    game = Game()
-    game.run()
-    winning_state = True
-    display_end_screen(winning_state)
-
-
-if __name__ == "__main__":
-    start_game()
