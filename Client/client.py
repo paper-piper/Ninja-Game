@@ -160,20 +160,45 @@ class GameClient:
         except Exception as e:
             logger.error(f"Error processing action queue: {e}")
 
+    def run_game_loop(self):
+        while True:
+            while not self.action_queue.empty():
+                self.process_action_queue()
+            self.game.update()
+            pygame.time.Clock().tick(60)
+            if not self.handle_events():
+                return
+
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+                return False
+
     def start(self):
         """
         Initialize the game, connect to the server, and start the main game loop.
         """
         try:
+            Thread(target=self.run_game_loop).start()
+
+            """
             self.connect_to_server()
             character_name = self.get_character_name()
             self.send_character_init(character_name)
-
+            """
+            pygame.init()
             while self.running:
-                self.handle_key_events()
-                self.receive_game_update()
-                self.process_action_queue()
-                self.game.update()
+                # self.handle_key_events()
+                #self.receive_game_update()
+                #self.process_action_queue()
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        self.running = False
+                        return False
+                keys = pygame.key.get_pressed()
+                if keys[pygame]:
+                    print("WhooHoo! (by me)")
                 pygame.time.Clock().tick(60)  # Control the frame rate
         except Exception as e:
             logger.error(f"Error in main game loop: {e}")
