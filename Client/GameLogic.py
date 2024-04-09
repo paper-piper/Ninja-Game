@@ -42,7 +42,6 @@ CHARACTER_HEIGHT = 32
 SHOOTING_CHANCE = 0.05
 
 
-
 class Camera:
     def __init__(self, width, height):
         """
@@ -402,6 +401,27 @@ class Game:
         except Exception as e:
             logger.error(f"Error drawing game objects: {e}")
 
+    def get_mouse_angle(self):
+        mx, my = pygame.mouse.get_pos()
+
+        # Adjust the mouse coordinates based on the camera's offset
+        # Since the camera's x and y represent the top-left corner of the view,
+        # you need to add these values to get the correct world position of the mouse
+        world_mx = mx - self.camera.camera.x
+        world_my = my - self.camera.camera.y
+
+        # Calculate the center position of the player
+        center_x = self.player.x + self.player.width // 2
+        center_y = self.player.y + self.player.height // 2
+
+        # Calculate the angle between the player's center and the mouse position in the world
+        angle = math.atan2(world_my - center_y, world_mx - center_x)
+
+        # Calculate the bullet's direction vector based on the angle
+        dx = math.cos(angle) * self.player.bullet_speed  # Speed of the bullet
+        dy = math.sin(angle) * self.player.bullet_speed  # Speed of the bullet
+        return dx, dy
+
 
 def display_end_screen(result):
     font = pygame.font.SysFont("Arial", 48)
@@ -491,3 +511,4 @@ def is_colliding_at(x, y):
     pixel_color = collision_map.get_at((int_x, int_y))
     alpha = pixel_color[3]
     return not alpha == 0
+

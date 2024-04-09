@@ -40,7 +40,8 @@ class GameClient:
         self.game = GameLogic.Game()
         self.server_ip = SERVER_IP
         self.server_port = SERVER_PORT
-        self.client_socket = None
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client_socket.settimeout(1.0)  # Set the timeout to 5 seconds for this operation
         self.running = True
         self.action_queue = Queue()
 
@@ -48,7 +49,6 @@ class GameClient:
         """
         Establish a connection to the game server using a TCP socket.
         """
-        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.client_socket.connect((self.server_ip, self.server_port))
             logger.info("Connected to server successfully.")
@@ -76,6 +76,11 @@ class GameClient:
         """
         Process keyboard events and send appropriate actions to the server based on key presses.
         """
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                self.send_shoot_action(self.game.get_mouse_angle())
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
             self.send_move_action('left')
@@ -85,8 +90,6 @@ class GameClient:
             self.send_move_action('up')
         elif keys[pygame.K_DOWN]:
             self.send_move_action('down')
-        if keys[pygame.K_SPACE]:
-            self.send_shoot_action(45)  # Example angle
 
     def send_move_action(self, direction):
         """
@@ -133,8 +136,9 @@ class GameClient:
             game_update = json.loads(message.decode())
             self.action_queue.put(game_update)
             logger.info(f"Received action from server: {game_update}")
-        except socket.error as e:
-            logger.error(f"Socket error while receiving game update: {e}")
+        except socket.timeout:
+            # happens all the time, don't need to worry
+            return
         except json.JSONDecodeError as e:
             logger.error(f"JSON decode error: {e}")
         except Exception as e:
@@ -145,35 +149,26 @@ class GameClient:
         Process all pending actions from the server, updating game state accordingly.
         """
         try:
-            while not self.action_queue.empty():
-                action = self.action_queue.get()
-                action_type = action.get(ACTION_TYPE)
-                action_parameters = action.get(ACTION_PARAMETERS, [])
-                player_id = action.get(PLAYER_ID)
+            action = self.action_queue.get()
+            action_type = action.get(ACTION_TYPE)
+            action_parameters = action.get(ACTION_PARAMETERS, [])
+            player_id = action.get(PLAYER_ID)
 
-                if action_type == CREATE_PLAYER:
-                    self.game.create_player(player_id, *action_parameters)
-                elif action_type == MOVE_PLAYER:
-                    self.game.move_player(player_id, *action_parameters)
-                elif action_type == SHOOT_PLAYER:
-                    self.game.shoot_player(player_id, *action_parameters)
+            if action_type == CREATE_PLAYER:
+                self.game.create_player(player_id, *action_parameters)
+            elif action_type == MOVE_PLAYER:
+                self.game.move_player(player_id, *action_parameters)
+            elif action_type == SHOOT_PLAYER:
+                self.game.shoot_player(player_id, *action_parameters)
         except Exception as e:
             logger.error(f"Error processing action queue: {e}")
 
     def run_game_loop(self):
-        while True:
+        while self.running:
             while not self.action_queue.empty():
                 self.process_action_queue()
             self.game.update()
             pygame.time.Clock().tick(60)
-            if not self.handle_events():
-                return
-
-    def handle_events(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                self.running = False
-                return False
 
     def start(self):
         """
@@ -182,23 +177,13 @@ class GameClient:
         try:
             Thread(target=self.run_game_loop).start()
 
-            """
             self.connect_to_server()
             character_name = self.get_character_name()
             self.send_character_init(character_name)
-            """
             pygame.init()
             while self.running:
-                # self.handle_key_events()
-                #self.receive_game_update()
-                #self.process_action_queue()
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        self.running = False
-                        return False
-                keys = pygame.key.get_pressed()
-                if keys[pygame]:
-                    print("WhooHoo! (by me)")
+                self.handle_key_events()
+                self.receive_game_update()
                 pygame.time.Clock().tick(60)  # Control the frame rate
         except Exception as e:
             logger.error(f"Error in main game loop: {e}")
