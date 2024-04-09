@@ -3,11 +3,10 @@ import json
 import pygame
 import GameLogic
 from threading import Thread
-import ast
 import logging
 from queue import Queue
 
-
+# TODO: change the protocol since to the new changes (client also uses action_parameterS)
 logging.basicConfig(
     filename='client.log',
     level=logging.DEBUG,
@@ -99,12 +98,12 @@ class GameClient:
         message = {'type': MOVE_PLAYER, 'action_parameter': direction}
         self.send_message(message)
 
-    def send_shoot_action(self, angle):
+    def send_shoot_action(self, dx, dy):
         """
         Send a shoot action to the server, indicating the direction of the shot.
         :param angle: The angle at which to shoot
         """
-        message = {'type': SHOOT_PLAYER, 'action_parameter': angle}
+        message = {'type': SHOOT_PLAYER, 'action_parameters': angle}
         self.send_message(message)
 
     def send_message(self, message):
