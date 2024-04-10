@@ -6,7 +6,6 @@ from threading import Thread
 import logging
 from queue import Queue
 
-# TODO: change the protocol since to the new changes (client also uses action_parameterS)
 logging.basicConfig(
     filename='client.log',
     level=logging.DEBUG,
@@ -56,14 +55,6 @@ class GameClient:
         except Exception as e:
             logger.exception(f"Failed to connect to server: {e}")
 
-    def send_character_init(self, character_name):
-        """
-        Send the initial character choice to the server.
-        :param character_name: The name of the character chosen by the user
-        """
-        message = {'type': CREATE_PLAYER, 'action_parameter': character_name}
-        self.send_message(message)
-
     def get_character_name(self):
         """
         Retrieve the character name selected by the user.
@@ -79,7 +70,7 @@ class GameClient:
             if event.type == pygame.QUIT:
                 self.running = False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                self.send_shoot_action(self.game.get_mouse_angle())
+                self.send_shoot_action(*self.game.get_mouse_angle())
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
             self.send_move_action('left')
@@ -90,20 +81,29 @@ class GameClient:
         elif keys[pygame.K_DOWN]:
             self.send_move_action('down')
 
+    def send_character_init(self, character_name):
+        """
+        Send the initial character choice to the server.
+        :param character_name: The name of the character chosen by the user
+        """
+        message = {'type': CREATE_PLAYER, 'action_parameters': [character_name]}
+        self.send_message(message)
+
     def send_move_action(self, direction):
         """
         Send a movement action to the server, indicating the direction the player wishes to move.
         :param direction: The direction to move (e.g., 'up', 'down', 'left', 'right')
         """
-        message = {'type': MOVE_PLAYER, 'action_parameter': direction}
+        message = {'type': MOVE_PLAYER, 'action_parameters': [direction]}
         self.send_message(message)
 
     def send_shoot_action(self, dx, dy):
         """
         Send a shoot action to the server, indicating the direction of the shot.
-        :param angle: The angle at which to shoot
+        :param dx: the x vector
+        :param dy: the y vector
         """
-        message = {'type': SHOOT_PLAYER, 'action_parameters': angle}
+        message = {'type': SHOOT_PLAYER, 'action_parameters': [dx, dy]}
         self.send_message(message)
 
     def send_message(self, message):
@@ -135,7 +135,7 @@ class GameClient:
             game_update = json.loads(message.decode())
             self.action_queue.put(game_update)
             logger.info(f"Received action from server: {game_update}")
-        except socket.timeout:
+        except socket.error:
             # happens all the time, don't need to worry
             return
         except json.JSONDecodeError as e:

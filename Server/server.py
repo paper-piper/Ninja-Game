@@ -1,6 +1,5 @@
 import socket
 import json
-import uuid
 import pygame
 from threading import Thread
 from queue import Queue
@@ -68,17 +67,6 @@ class CommandsServer:
             self.game.update()
             pygame.time.Clock().tick(60)
 
-    def get_character_name(self, client_socket):
-        """
-        get the character name from the client
-        :param client_socket:
-        :return: None
-        """
-        # Assuming the client sends character name immediately after connection
-        message = self.receive_message(client_socket)
-        character_name = message.get("character_name", "Default Character")
-        return character_name
-
     def handle_client(self, client_socket, player_id):
         try:
             while True:
@@ -93,12 +81,18 @@ class CommandsServer:
     def process_action(self, player_id, action):
         action_type = action['type']
         if action_type == MOVE_PLAYER:
-            self.game.move_player(player_id, action['action_parameter'])
+            direction = action['action_parameters'][0]  # Assuming the first item is the direction
+            self.game.move_player(player_id, direction)
         elif action_type == SHOOT_PLAYER:
-            self.game.shoot_player(player_id, action['action_parameter'])
+            dx, dy = action['action_parameters']  # Unpacking the parameters
+            self.game.shoot_player(player_id, [dx, dy])
         elif action_type == CREATE_PLAYER:
-            self.game.create_player(player_id, action['action_parameter'])
-            self.broadcast_game_action(player_id, {'type': PLAYER_INIT, 'action_parameters': [action['action_parameter'], 20, 30]})
+            character_name = action['action_parameters'][0]
+            self.game.create_player(player_id, character_name)
+            self.broadcast_game_action(
+                player_id,
+                {'type': PLAYER_INIT, 'action_parameters': [character_name, 20, 30]}
+            )
 
     def cleanup_client(self, player_id):
         if player_id in self.clients:
