@@ -72,9 +72,6 @@ class GameClient:
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 self.send_shoot_action(*self.game.get_mouse_angle())
         keys = pygame.key.get_pressed()
-        for key in keys:
-            if key:
-                print("Something!")
         if keys[pygame.K_a]:
             self.send_move_action('left')
         elif keys[pygame.K_d]:
@@ -195,5 +192,7 @@ class GameClient:
 
 
 if __name__ == "__main__":
+    if input("OtherPlayer?") == 'yes':
+        character = 'Eskimo'
     client = GameClient()
     client.start()

@@ -106,6 +106,7 @@ class Player:
         self.anim_count = 0  # Counter to track animation speed
 
         # character qualities
+        self.name = character.name
         self.speed = character.speed
         self.hp = character.hp
         self.bullet_speed = character.bullet_speed
@@ -302,6 +303,9 @@ class Game:
                 player.take_damage(bullet.damage)
                 return True  # Bullet hit a player
         return False  # No hit detected
+
+    def get_player(self, player_id):
+        return self.players[player_id]
 
 
 def load_character_from_json(file_path, name):

@@ -29,7 +29,6 @@ PLAYER_INIT = "player_init"
 HIT_PLAYER = "hit"
 WIN_PLAYER = "win"
 
-id_counter = 1  # starts from 1, since id zero is saved for acknowledge messages
 
 
 class CommandsServer:
@@ -37,9 +36,9 @@ class CommandsServer:
         self.game = GameLogic.Game()
         self.action_queue = Queue()
         self.clients = {}
+        self.id_counter = 1   # starts from 1, since id zero is saved for acknowledge messages
 
     def start_server(self):
-        global id_counter
         # Start the game in a separate thread
         Thread(target=self.run_game_loop).start()
         # start listening
@@ -51,12 +50,8 @@ class CommandsServer:
 
         while True:
             client_socket, address = server_socket.accept()
-            player_id = id_counter
-            id_counter += 1
-            self.clients[player_id] = client_socket
-
             # handle client inputs
-            Thread(target=self.handle_client, args=(client_socket, player_id)).start()
+            Thread(target=self.handle_client, args=(client_socket, )).start()
 
     def run_game_loop(self):
         while True:
@@ -67,7 +62,18 @@ class CommandsServer:
             self.game.update()
             pygame.time.Clock().tick(60)
 
-    def handle_client(self, client_socket, player_id):
+    def handle_client(self, client_socket):
+        # before adding the client, send to him all the current clients.
+        for other_client_id, other_client_socket in self.clients.items():
+            player = self.game.get_player(other_client_id)
+            action = {'type': PLAYER_INIT,
+                      'action_parameters': [player.name, player.x, player.y],
+                      'player_id': other_client_id
+                      }
+            self.send_message(client_socket, action)
+        player_id = self.id_counter
+        self.id_counter += 1
+        self.clients[player_id] = client_socket
         try:
             while True:
                 message = self.receive_message(client_socket)
@@ -80,20 +86,31 @@ class CommandsServer:
             self.cleanup_client(player_id)
 
     def process_action(self, player_id, action):
-        action_type = action['type']
-        if action_type == MOVE_PLAYER:
-            direction = action['action_parameters'][0]  # Assuming the first item is the direction
-            self.game.move_player(player_id, direction)
-        elif action_type == SHOOT_PLAYER:
-            dx, dy = action['action_parameters']  # Unpacking the parameters
-            self.game.shoot_player(player_id, [dx, dy])
-        elif action_type == CREATE_PLAYER:
-            character_name = action['action_parameters'][0]
-            self.game.create_player(player_id, character_name)
-            self.broadcast_game_action(
-                player_id,
-                {'type': PLAYER_INIT, 'action_parameters': [character_name, 20, 30]}
-            )
+        try:
+            action_type = action['type']
+            if action_type == MOVE_PLAYER:
+                direction = action['action_parameters'][0]  # Assuming the first item is the direction
+                self.game.move_player(player_id, direction)
+            elif action_type == SHOOT_PLAYER:
+                dx, dy = action['action_parameters']  # Unpacking the parameters
+                self.game.shoot_player(player_id, dx, dy)
+
+            if action_type == CREATE_PLAYER:
+                character_name = action['action_parameters'][0]
+                self.game.create_player(player_id, character_name)
+                self.broadcast_game_action(
+                    player_id,
+                    {'type': action_type, 'action_parameters': [character_name, 20, 30]}
+                )
+            else:
+                # broadcast the action to all clients
+                self.broadcast_game_action(
+                    player_id,
+                    action
+                )
+
+        except Exception as e:
+            logger.error(f"caught expedition: {e}")
 
     def cleanup_client(self, player_id):
         if player_id in self.clients:
