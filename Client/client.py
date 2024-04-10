@@ -1,3 +1,4 @@
+import random
 import socket
 import json
 import pygame
@@ -192,7 +193,7 @@ class GameClient:
 
 
 if __name__ == "__main__":
-    if input("OtherPlayer?") == 'yes':
+    if random.randint(1,3) == 1:
         character = 'Eskimo'
     client = GameClient()
     client.start()
