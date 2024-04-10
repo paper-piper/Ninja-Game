@@ -39,7 +39,7 @@ class GameClient:
         self.server_ip = SERVER_IP
         self.server_port = SERVER_PORT
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client_socket.settimeout(1.0)  # Set the timeout to 5 seconds for this operation
+        self.client_socket.settimeout(0.2)  # Set the timeout to a small amount
         self.running = True
         self.action_queue = Queue()
 
@@ -72,13 +72,16 @@ class GameClient:
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 self.send_shoot_action(*self.game.get_mouse_angle())
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT]:
+        for key in keys:
+            if key:
+                print("Something!")
+        if keys[pygame.K_a]:
             self.send_move_action('left')
-        elif keys[pygame.K_RIGHT]:
+        elif keys[pygame.K_d]:
             self.send_move_action('right')
-        elif keys[pygame.K_UP]:
+        elif keys[pygame.K_w]:
             self.send_move_action('up')
-        elif keys[pygame.K_DOWN]:
+        elif keys[pygame.K_s]:
             self.send_move_action('down')
 
     def send_character_init(self, character_name):
@@ -115,6 +118,7 @@ class GameClient:
             message_str = json.dumps(message)
             message_length = len(message_str)
             self.client_socket.sendall(message_length.to_bytes(4, byteorder='big') + message_str.encode())
+            logger.info(f"Sent message: {message}")
         except socket.error as e:
             logger.error(f"Socket error during message sending: {e}")
         except Exception as e:
@@ -163,11 +167,14 @@ class GameClient:
             logger.error(f"Error processing action queue: {e}")
 
     def run_game_loop(self):
-        while self.running:
-            while not self.action_queue.empty():
-                self.process_action_queue()
-            self.game.update()
-            pygame.time.Clock().tick(60)
+        try:
+            while self.running:
+                while not self.action_queue.empty():
+                    self.process_action_queue()
+                self.game.update()
+                pygame.time.Clock().tick(60)
+        except Exception as e:
+            logger.error(f"Error running game loop: {e}")
 
     def start(self):
         """
@@ -183,7 +190,6 @@ class GameClient:
             while self.running:
                 self.handle_key_events()
                 self.receive_game_update()
-                pygame.time.Clock().tick(60)  # Control the frame rate
         except Exception as e:
             logger.error(f"Error in main game loop: {e}")
 

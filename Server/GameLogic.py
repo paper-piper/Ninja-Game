@@ -274,9 +274,9 @@ class Game:
         if player_id in self.players:
             self.players[player_id].move(direction)
 
-    def shoot_player(self, player_id, angle):
+    def shoot_player(self, player_id, dx, dy):
         if player_id in self.players:
-            self.players[player_id].shoot(angle)
+            self.players[player_id].shoot(dx, dy)
 
     def handle_events(self):
         for event in pygame.event.get():

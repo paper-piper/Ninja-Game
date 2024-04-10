@@ -191,7 +191,7 @@ class Player:
         self.rect.x = self.x
         self.rect.y = self.y
 
-    def shoot(self, angle):
+    def shoot(self, dx, dy):
         current_time = pygame.time.get_ticks()
         if current_time - self.last_shot_time > self.shooting_cooldown:
             self.last_shot_time = current_time
@@ -203,10 +203,6 @@ class Player:
             # Calculate the center position of the player
             center_x = self.x + self.width // 2
             center_y = self.y + self.height // 2
-
-            # Calculate the bullet's direction vector based on the angle
-            dx = math.cos(angle) * self.bullet_speed  # Speed of the bullet
-            dy = math.sin(angle) * self.bullet_speed  # Speed of the bullet
 
             # Create and add the new bullet to the bullets list
             self.bullets.append(Bullet(
@@ -311,9 +307,6 @@ class Game:
         Update the game state, including moving bullets and drawing game objects.
         """
         try:
-            keys = pygame.key.get_pressed()
-            if keys[pygame.K_a]:
-                print("WhooHoo!")
             self.update_bullets()
             self.draw_game_objects()
             pygame.display.flip()
@@ -352,9 +345,9 @@ class Game:
         if player_id in self.players:
             self.players[player_id].move(direction)
 
-    def shoot_player(self, player_id, angle):
+    def shoot_player(self, player_id, dx, dy):
         if player_id in self.players:
-            self.players[player_id].shoot(angle)
+            self.players[player_id].shoot(dx, dy)
 
     def check_for_quit(self):
         """

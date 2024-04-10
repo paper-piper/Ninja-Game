@@ -71,6 +71,7 @@ class CommandsServer:
         try:
             while True:
                 message = self.receive_message(client_socket)
+                logger.info(f"Received message grom client id: {player_id}. message: {message}")
                 if message:
                     self.action_queue.put((player_id, message))
         except Exception as e:
@@ -101,9 +102,10 @@ class CommandsServer:
             self.game.delete_player(player_id)
 
     def broadcast_game_action(self, player_id, action):
-        for cid, client_socket in self.clients.items():
+        for client_id, client_socket in self.clients.items():
             action_with_id = action.copy()
-            action_with_id['player_id'] = '0' if cid == player_id else player_id
+            action_with_id['player_id'] = '0' if client_id == player_id else player_id
+            logger.info(f"Sent message to client id: {client_id}. the message: {action}")
             self.send_message(client_socket, action_with_id)
 
     def send_message(self, client_socket, message):
