@@ -145,7 +145,7 @@ class Player:
         self.rect.x = self.x
         self.rect.y = self.y
 
-    def shoot(self, angle):
+    def shoot(self, dx, dy):
         current_time = pygame.time.get_ticks()
         if current_time - self.last_shot_time > self.shooting_cooldown:
             self.last_shot_time = current_time
@@ -157,10 +157,6 @@ class Player:
             # Calculate the center position of the player
             center_x = self.x + self.width // 2
             center_y = self.y + self.height // 2
-
-            # Calculate the bullet's direction vector based on the angle
-            dx = math.cos(angle) * self.bullet_speed  # Speed of the bullet
-            dy = math.sin(angle) * self.bullet_speed  # Speed of the bullet
 
             # Create and add the new bullet to the bullets list
             self.bullets.append(Bullet(
@@ -234,7 +230,8 @@ class Game:
         self.camera.update(direction)
 
     def create_player(self, player_id, character_name):
-        x, y = self.find_random_free_position(CHARACTER_WIDTH, CHARACTER_HEIGHT)
+        # x, y = self.find_random_free_position(CHARACTER_WIDTH, CHARACTER_HEIGHT)
+        x, y = 20, 30
         if not x:
             logger.error("Didn't found any x,y for the player to be created")
         character = load_character_from_json(CHARACTER_STATS_FILE_PATH, character_name)
@@ -247,6 +244,7 @@ class Game:
         )
         self.players[player_id] = player
         logger.info(f"Created new player ({character_name}) in x = {x}, y = {y}")
+        return x, y
 
     def find_random_free_position(self, character_width, character_height):
         """

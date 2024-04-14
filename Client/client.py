@@ -1,6 +1,8 @@
 import random
 import socket
 import json
+import time
+
 import pygame
 import GameLogic
 from threading import Thread
@@ -32,7 +34,7 @@ character = "DarkNinja"
 
 
 class GameClient:
-    def __init__(self):
+    def __init__(self, character_name, update_delay):
         """
         Initialize the client with the server's IP address and port, and set up game and networking components.
         """
@@ -42,7 +44,10 @@ class GameClient:
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.settimeout(0.2)  # Set the timeout to a small amount
         self.running = True
+        # the amount of seconds which the client will update the server
+        self.update_delay = update_delay
         self.action_queue = Queue()
+        self.character_name = character_name
 
     def connect_to_server(self):
         """
@@ -63,25 +68,6 @@ class GameClient:
         """
         return character
 
-    def handle_key_events(self):
-        """
-        Process keyboard events and send appropriate actions to the server based on key presses.
-        """
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                self.running = False
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                self.send_shoot_action(*self.game.get_mouse_angle())
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_a]:
-            self.send_move_action('left')
-        elif keys[pygame.K_d]:
-            self.send_move_action('right')
-        elif keys[pygame.K_w]:
-            self.send_move_action('up')
-        elif keys[pygame.K_s]:
-            self.send_move_action('down')
-
     def send_character_init(self, character_name):
         """
         Send the initial character choice to the server.
@@ -90,12 +76,14 @@ class GameClient:
         message = {'type': CREATE_PLAYER, 'action_parameters': [character_name]}
         self.send_message(message)
 
-    def send_move_action(self, direction):
+    def send_move_action(self, x, y):
         """
         Send a movement action to the server, indicating the direction the player wishes to move.
-        :param direction: The direction to move (e.g., 'up', 'down', 'left', 'right')
+        :param x:
+        :param y:
+        :return:
         """
-        message = {'type': MOVE_PLAYER, 'action_parameters': [direction]}
+        message = {'type': MOVE_PLAYER, 'action_parameters': [x, y]}
         self.send_message(message)
 
     def send_shoot_action(self, dx, dy):
@@ -116,7 +104,7 @@ class GameClient:
             message_str = json.dumps(message)
             message_length = len(message_str)
             self.client_socket.sendall(message_length.to_bytes(4, byteorder='big') + message_str.encode())
-            logger.info(f"Sent message: {message}")
+            # logger.info(f"Sent message: {message}")
         except socket.error as e:
             logger.error(f"Socket error during message sending: {e}")
         except Exception as e:
@@ -136,7 +124,7 @@ class GameClient:
                 return
             game_update = json.loads(message.decode())
             self.action_queue.put(game_update)
-            logger.info(f"Received action from server: {game_update}")
+            # logger.info(f"Received action from server: {game_update}")
         except socket.error:
             # happens all the time, don't need to worry
             return
@@ -157,43 +145,74 @@ class GameClient:
 
             if action_type == CREATE_PLAYER:
                 self.game.create_player(player_id, *action_parameters)
-            elif action_type == MOVE_PLAYER:
-                self.game.move_player(player_id, *action_parameters)
+            elif action_type == MOVE_PLAYER and player_id != '0':
+                # TODO: set up a difference system and keeping the current and desired x, y
+                self.game.players[player_id].x = action_parameters[0]
+                self.game.players[player_id].y = action_parameters[1]
+                # self.game.move_player(player_id, *action_parameters)
             elif action_type == SHOOT_PLAYER:
                 self.game.shoot_player(player_id, *action_parameters)
         except Exception as e:
             logger.error(f"Error processing action queue: {e}")
 
-    def run_game_loop(self):
-        try:
-            while self.running:
-                while not self.action_queue.empty():
-                    self.process_action_queue()
-                self.game.update()
-                pygame.time.Clock().tick(60)
-        except Exception as e:
-            logger.error(f"Error running game loop: {e}")
+    def handle_key_events(self):
+        """
+        Process keyboard events and update the game object accordingly
+        """
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                self.send_shoot_action(*self.game.get_mouse_angle())
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_a]:
+            # '0' means the client's player
+            self.game.move_player('0', 'left')
+        elif keys[pygame.K_d]:
+            self.game.move_player('0', 'right')
+        elif keys[pygame.K_w]:
+            self.game.move_player('0', 'up')
+        elif keys[pygame.K_s]:
+            self.game.move_player('0', 'down')
+
+    def get_server_updates(self):
+        while self.running:
+            self.receive_game_update()
+
+    def send_player_state(self):
+        while self.running:
+            if self.game.player:
+                x, y = self.game.player.x, self.game.player.y
+                self.send_move_action(x, y)
+                time.sleep(0.2)
 
     def start(self):
         """
         Initialize the game, connect to the server, and start the main game loop.
         """
         try:
-            Thread(target=self.run_game_loop).start()
-
             self.connect_to_server()
-            character_name = self.get_character_name()
-            self.send_character_init(character_name)
-            pygame.init()
+            # constantly get updates from server and push methods into the action queue
+            Thread(target=self.get_server_updates).start()
+            self.send_character_init(self.character_name)
+
+            # every 0.2 second send the player's x and y coordinate
+            Thread(target=self.send_player_state).start()
+
+            # every tick, update the game state according to user input and actions from server
             while self.running:
+                while not self.action_queue.empty():
+                    self.process_action_queue()
                 self.handle_key_events()
-                self.receive_game_update()
+                self.game.update()
+                pygame.time.Clock().tick(60)
         except Exception as e:
             logger.error(f"Error in main game loop: {e}")
 
 
 if __name__ == "__main__":
-    if random.randint(1,3) == 1:
+    if random.randint(1, 3) == 1:
         character = 'Eskimo'
-    client = GameClient()
+    pygame.init()
+    client = GameClient(character, 0.2)
     client.start()

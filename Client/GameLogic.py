@@ -81,6 +81,7 @@ class Camera:
         Make the camera follow the target entity.
         :param target: The target entity that the camera should follow
         """
+        # FIXME the x and y calculation is reversed twice. working, but weird
         x = -target.rect.x + int(screen_width / 2)
         y = -target.rect.y + int(screen_height / 2)
 
@@ -90,7 +91,7 @@ class Camera:
         x = max(-(self.width - screen_width), x)  # right
         y = max(-(self.height - screen_height), y)  # bottom
 
-        self.camera = pygame.Rect(x, y, self.width, self.height)
+        self.camera = pygame.Rect(-x, -y, self.width, self.height)
 
 
 class Character:
@@ -311,7 +312,8 @@ class Game:
             self.draw_game_objects()
             pygame.display.flip()
             if self.player:
-                self.camera.update(self.player)
+                self.camera.follow_target(self.player)
+                pass
         except Exception as e:
             logger.error(f"Error updating game state: {e}")
 
@@ -362,10 +364,10 @@ class Game:
     def update_bullets(self):
         for player_id, player in self.players.items():
             for bullet in player.bullets[:]:
-                bullet.move()  # Assuming 'move' method updates the bullet's position
-
+                if bullet.move():  # Moving the bullet and checking collision in the same time
+                    player.bullets.remove(bullet)
                 # Check if the bullet is out of bounds or hits another player
-                if not self.within_bounds(bullet) or self.check_bullet_hit(player_id, bullet):
+                elif not self.within_bounds(bullet) or self.check_bullet_hit(player_id, bullet):
                     player.bullets.remove(bullet)
 
     def within_bounds(self, bullet):
@@ -400,8 +402,8 @@ class Game:
         # Adjust the mouse coordinates based on the camera's offset
         # Since the camera's x and y represent the top-left corner of the view,
         # you need to add these values to get the correct world position of the mouse
-        world_mx = mx - self.camera.camera.x
-        world_my = my - self.camera.camera.y
+        world_mx = mx + self.camera.camera.x
+        world_my = my + self.camera.camera.y
 
         # Calculate the center position of the player
         center_x = self.player.x + self.player.width // 2

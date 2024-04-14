@@ -30,7 +30,6 @@ HIT_PLAYER = "hit"
 WIN_PLAYER = "win"
 
 
-
 class CommandsServer:
     def __init__(self):
         self.game = GameLogic.Game()
@@ -77,9 +76,9 @@ class CommandsServer:
         try:
             while True:
                 message = self.receive_message(client_socket)
-                logger.info(f"Received message grom client id: {player_id}. message: {message}")
                 if message:
                     self.action_queue.put((player_id, message))
+                    # logger.info(f"Received message grom client id: {player_id}. message: {message}")
         except Exception as e:
             logger.error(f"Error handling client {player_id}: {e}")
         finally:
@@ -89,18 +88,19 @@ class CommandsServer:
         try:
             action_type = action['type']
             if action_type == MOVE_PLAYER:
-                direction = action['action_parameters'][0]  # Assuming the first item is the direction
-                self.game.move_player(player_id, direction)
+                player_x, player_y = action['action_parameters'][0], action['action_parameters'][1]
+                self.game.players[player_id].x = player_x
+                self.game.players[player_id].y = player_y
             elif action_type == SHOOT_PLAYER:
                 dx, dy = action['action_parameters']  # Unpacking the parameters
                 self.game.shoot_player(player_id, dx, dy)
 
             if action_type == CREATE_PLAYER:
                 character_name = action['action_parameters'][0]
-                self.game.create_player(player_id, character_name)
+                x, y = self.game.create_player(player_id, character_name)
                 self.broadcast_game_action(
                     player_id,
-                    {'type': action_type, 'action_parameters': [character_name, 20, 30]}
+                    {'type': action_type, 'action_parameters': [character_name, x, y]}
                 )
             else:
                 # broadcast the action to all clients
@@ -122,7 +122,7 @@ class CommandsServer:
         for client_id, client_socket in self.clients.items():
             action_with_id = action.copy()
             action_with_id['player_id'] = '0' if client_id == player_id else player_id
-            logger.info(f"Sent message to client id: {client_id}. the message: {action}")
+            # logger.info(f"Sent message to client id: {client_id}. the message: {action}")
             self.send_message(client_socket, action_with_id)
 
     def send_message(self, client_socket, message):
