@@ -41,8 +41,7 @@ class GameClient:
         self.game = GameLogic.Game()
         self.server_ip = SERVER_IP
         self.server_port = SERVER_PORT
-        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client_socket.settimeout(0.2)  # Set the timeout to a small amount
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.running = True
         # the amount of seconds which the client will update the server
         self.update_delay = update_delay
@@ -101,9 +100,11 @@ class GameClient:
         :param message: The message dictionary to send
         """
         try:
+            # TODO: integrate to lengthen messages
             message_str = json.dumps(message)
             message_length = len(message_str)
-            self.client_socket.sendall(message_length.to_bytes(4, byteorder='big') + message_str.encode())
+            full_message = str(message_length) + message_str
+            self.client_socket.sendto(message_str.encode(), (self.server_ip, self.server_port))
             # logger.info(f"Sent message: {message}")
         except socket.error as e:
             logger.error(f"Socket error during message sending: {e}")
@@ -115,13 +116,8 @@ class GameClient:
         Receive and process the updated game state from the server.
         """
         try:
-            header = self.client_socket.recv(4)
-            if not header:
-                return
-            message_length = int.from_bytes(header, byteorder='big')
-            message = self.client_socket.recv(message_length)
-            if not message:
-                return
+            # TODO: validate the message json file
+            message, _ = self.client_socket.recvfrom(1024)
             game_update = json.loads(message.decode())
             self.action_queue.put(game_update)
             # logger.info(f"Received action from server: {game_update}")

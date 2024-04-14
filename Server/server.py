@@ -42,15 +42,15 @@ class CommandsServer:
         Thread(target=self.run_game_loop).start()
         # start listening
         logger.info(f"Server started, listening on {SERVER_IP}:{SERVER_PORT}")
-        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         server_socket.bind((SERVER_IP, SERVER_PORT))
-        server_socket.listen()
 
         while True:
             client_socket, address = server_socket.accept()
             # handle client inputs
-            Thread(target=self.handle_client, args=(client_socket, )).start()
+            message, client_address = server_socket.recvfrom(1024)
+            self.clients[client_address] = True  # Register client address
+            self.action_queue.put((client_address, json.loads(message.decode())))
 
     def run_game_loop(self):
         while True:
@@ -125,10 +125,9 @@ class CommandsServer:
             # logger.info(f"Sent message to client id: {client_id}. the message: {action}")
             self.send_message(client_socket, action_with_id)
 
-    def send_message(self, client_socket, message):
+    def send_message(self, client_socket, client_address, message):
         message_json = json.dumps(message)
-        message_length = len(message_json)
-        client_socket.sendall(message_length.to_bytes(4, byteorder='big') + message_json.encode())
+        client_socket.sendto(message_json.encode(), client_address)
 
     def receive_message(self, client_socket):
         header = client_socket.recv(4)
