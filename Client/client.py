@@ -31,6 +31,7 @@ ACTION_PARAMETERS = 'action_parameters'
 PLAYER_ID = 'player_id'
 
 character = "DarkNinja"
+UPDATE_DELAY = 1
 
 
 class GameClient:
@@ -47,6 +48,7 @@ class GameClient:
         self.update_delay = update_delay
         self.action_queue = Queue()
         self.character_name = character_name
+        self.target_positions = {}
 
     def connect_to_server(self):
         """
@@ -129,28 +131,6 @@ class GameClient:
         except Exception as e:
             logger.error(f"Error receiving game state: {e}")
 
-    def process_action_queue(self):
-        """
-        Process all pending actions from the server, updating game state accordingly.
-        """
-        try:
-            action = self.action_queue.get()
-            action_type = action.get(ACTION_TYPE)
-            action_parameters = action.get(ACTION_PARAMETERS, [])
-            player_id = action.get(PLAYER_ID)
-
-            if action_type == CREATE_PLAYER:
-                self.game.create_player(player_id, *action_parameters)
-            elif action_type == MOVE_PLAYER and player_id != '0':
-                # TODO: set up a difference system and keeping the current and desired x, y
-                self.game.players[player_id].x = action_parameters[0]
-                self.game.players[player_id].y = action_parameters[1]
-                # self.game.move_player(player_id, *action_parameters)
-            elif action_type == SHOOT_PLAYER:
-                self.game.shoot_player(player_id, *action_parameters)
-        except Exception as e:
-            logger.error(f"Error processing action queue: {e}")
-
     def handle_key_events(self):
         """
         Process keyboard events and update the game object accordingly
@@ -171,6 +151,44 @@ class GameClient:
         elif keys[pygame.K_s]:
             self.game.move_player('0', 'down')
 
+    def handle_movements(self):
+        # Update player positions towards their targets
+        for player_id, (target_x, target_y) in self.target_positions.items():
+            current_x, current_y = self.game.players[player_id].x, self.game.players[player_id].y
+            # Determine the direction to move based on target position
+            if target_x > current_x:
+                self.game.move_player(player_id, 'right')
+            elif target_x < current_x:
+                self.game.move_player(player_id, 'left')
+
+            if target_y > current_y:
+                self.game.move_player(player_id, 'down')
+            elif target_y < current_y:
+                self.game.move_player(player_id, 'up')
+
+    def process_action_queue(self):
+        """
+        Process all pending actions from the server, updating game state accordingly.
+        """
+        try:
+            while not self.action_queue.empty():
+                action = self.action_queue.get()
+                action_type = action.get(ACTION_TYPE)
+                action_parameters = action.get(ACTION_PARAMETERS, [])
+                player_id = action.get(PLAYER_ID)
+
+                if action_type == CREATE_PLAYER:
+                    self.game.create_player(player_id, *action_parameters)
+
+                elif action_type == MOVE_PLAYER and player_id != '0':
+                    x, y = action_parameters[0], action_parameters[1]
+                    self.target_positions[player_id] = (x, y)
+
+                elif action_type == SHOOT_PLAYER:
+                    self.game.shoot_player(player_id, *action_parameters)
+        except Exception as e:
+            logger.error(f"Error processing action queue: {e}")
+
     def get_server_updates(self):
         while self.running:
             self.receive_game_update()
@@ -187,7 +205,6 @@ class GameClient:
         Initialize the game, connect to the server, and start the main game loop.
         """
         try:
-            self.connect_to_server()
             # constantly get updates from server and push methods into the action queue
             Thread(target=self.get_server_updates).start()
             self.send_character_init(self.character_name)
@@ -197,9 +214,10 @@ class GameClient:
 
             # every tick, update the game state according to user input and actions from server
             while self.running:
-                while not self.action_queue.empty():
-                    self.process_action_queue()
+                self.process_action_queue()
                 self.handle_key_events()
+                self.handle_movements()
+
                 self.game.update()
                 pygame.time.Clock().tick(60)
         except Exception as e:
@@ -210,5 +228,5 @@ if __name__ == "__main__":
     if random.randint(1, 3) == 1:
         character = 'Eskimo'
     pygame.init()
-    client = GameClient(character, 0.2)
+    client = GameClient(character, UPDATE_DELAY)
     client.start()

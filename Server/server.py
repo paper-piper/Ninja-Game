@@ -32,6 +32,7 @@ WIN_PLAYER = "win"
 
 class CommandsServer:
     def __init__(self):
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.game = GameLogic.Game()
         self.action_queue = Queue()
         self.clients = {}
@@ -42,15 +43,17 @@ class CommandsServer:
         Thread(target=self.run_game_loop).start()
         # start listening
         logger.info(f"Server started, listening on {SERVER_IP}:{SERVER_PORT}")
-        server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        server_socket.bind((SERVER_IP, SERVER_PORT))
+        self.server_socket.bind((SERVER_IP, SERVER_PORT))
 
         while True:
-            client_socket, address = server_socket.accept()
             # handle client inputs
-            message, client_address = server_socket.recvfrom(1024)
-            self.clients[client_address] = True  # Register client address
-            self.action_queue.put((client_address, json.loads(message.decode())))
+            message, client_address = self.server_socket.recvfrom(1024)
+            client_id = next((k for k, v in self.clients.items() if v == client_address), None)
+            if not client_id:
+                client_id = self.id_counter
+                self.clients[self.id_counter] = client_address  # Register client address
+                self.id_counter += 1
+            self.action_queue.put((client_id, json.loads(message.decode())))
 
     def run_game_loop(self):
         while True:
@@ -60,29 +63,6 @@ class CommandsServer:
 
             self.game.update()
             pygame.time.Clock().tick(60)
-
-    def handle_client(self, client_socket):
-        # before adding the client, send to him all the current clients.
-        for other_client_id, other_client_socket in self.clients.items():
-            player = self.game.get_player(other_client_id)
-            action = {'type': PLAYER_INIT,
-                      'action_parameters': [player.name, player.x, player.y],
-                      'player_id': other_client_id
-                      }
-            self.send_message(client_socket, action)
-        player_id = self.id_counter
-        self.id_counter += 1
-        self.clients[player_id] = client_socket
-        try:
-            while True:
-                message = self.receive_message(client_socket)
-                if message:
-                    self.action_queue.put((player_id, message))
-                    # logger.info(f"Received message grom client id: {player_id}. message: {message}")
-        except Exception as e:
-            logger.error(f"Error handling client {player_id}: {e}")
-        finally:
-            self.cleanup_client(player_id)
 
     def process_action(self, player_id, action):
         try:
@@ -102,6 +82,15 @@ class CommandsServer:
                     player_id,
                     {'type': action_type, 'action_parameters': [character_name, x, y]}
                 )
+                # after sending the client his own character, send all other clients
+                for other_client_id, other_client_socket in self.clients.items():
+                    if other_client_id != player_id:
+                        player = self.game.get_player(other_client_id)
+                        action = {'type': PLAYER_INIT,
+                                  'action_parameters': [player.name, player.x, player.y],
+                                  'player_id': other_client_id
+                                  }
+                        self.send_message(self.clients[player_id], action)
             else:
                 # broadcast the action to all clients
                 self.broadcast_game_action(
@@ -125,9 +114,9 @@ class CommandsServer:
             # logger.info(f"Sent message to client id: {client_id}. the message: {action}")
             self.send_message(client_socket, action_with_id)
 
-    def send_message(self, client_socket, client_address, message):
+    def send_message(self, client_address, message):
         message_json = json.dumps(message)
-        client_socket.sendto(message_json.encode(), client_address)
+        self.server_socket.sendto(message_json.encode(), client_address)
 
     def receive_message(self, client_socket):
         header = client_socket.recv(4)
