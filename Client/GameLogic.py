@@ -2,7 +2,7 @@ import pygame
 from PIL import Image
 import math
 import json
-import random
+import sys
 import logging
 
 # Initialize logger
@@ -26,14 +26,21 @@ pygame.display.set_caption("Tank Game")
 
 # Images paths
 MAP_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
-collision_image_path = r'../Assets/Map/UpdatedCollision.png'
-CHARACTER_STATS_FILE_PATH = "../Characters.json"
+COLLISION_IMAGE_PATH = r'../Assets/Map/UpdatedCollision.png'
+CHARACTER_STATS_FILE_PATH = r"../Characters.json"
+MAIN_MENU_IMAGE_PATH = r'../Assets/MainMenu/bg.png'
+
+# Music paths
+MAIN_MENU_MUSIC_PATH = r'../Assets/Music/1 - Adventure Begin.ogg'
+
+# Font paths
+NORMAL_FONT_PATH = r'../Assets/font/NormalFont.ttf'
 
 MAP_WIDTH = 0
 MAP_HEIGHT = 0
 # Load images
 map_image = pygame.image.load(MAP_IMAGE_PATH).convert_alpha()
-collision_map = pygame.image.load(collision_image_path).convert_alpha()
+collision_map = pygame.image.load(COLLISION_IMAGE_PATH).convert_alpha()
 
 # player qualities
 player_speed = 4
@@ -507,3 +514,58 @@ def is_colliding_at(x, y):
     alpha = pixel_color[3]
     return not alpha == 0
 
+
+class MainMenu:
+    def __init__(self, screen):
+        self.screen = screen
+        self.bg_image = pygame.image.load(MAIN_MENU_IMAGE_PATH)  # Load your background image
+        pygame.mixer.music.load(MAIN_MENU_MUSIC_PATH)  # Load your background music
+        self.font = pygame.font.Font(NORMAL_FONT_PATH, 36)  # Set the font for the menu text
+        self.menu_items = ['Start Game', 'Settings', 'Exit']
+        self.texts = []
+        self.rects = []
+
+        for item in self.menu_items:
+            text_surface = self.font.render(item, True, (255, 255, 255))
+            text_rect = text_surface.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2 + 40 * self.menu_items.index(item)))
+            self.texts.append(text_surface)
+            self.rects.append(text_rect)
+
+    def run(self):
+        running = True
+        pygame.mixer.music.play(-1)  # Play music indefinitely
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:  # Left mouse click
+                        self.handle_click(event.pos)
+
+            self.screen.blit(self.bg_image, (0, 0))
+
+            # Check for mouse hover to highlight text
+            mouse_pos = pygame.mouse.get_pos()
+            for i, rect in enumerate(self.rects):
+                text_surface = self.font.render(self.menu_items[i], True, (255, 255, 255))
+                if rect.collidepoint(mouse_pos):
+                    text_surface = self.font.render(self.menu_items[i], True, (255, 0, 0))  # Change color on hover
+                self.screen.blit(text_surface, rect)
+
+            pygame.display.flip()
+
+    def handle_click(self, mouse_pos):
+        for rect, menu_item in zip(self.rects, self.menu_items):
+            if rect.collidepoint(mouse_pos):
+                print(f"{menu_item} clicked")  # Handle the menu item selection here
+                if menu_item == 'Exit':
+                    pygame.quit()
+                    sys.exit()
+
+
+if __name__ == '__main__':
+    pygame.init()
+    screen = pygame.display.set_mode((800, 600))
+    menu = MainMenu(screen)
+    menu.run()

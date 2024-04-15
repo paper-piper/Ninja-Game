@@ -31,7 +31,7 @@ ACTION_PARAMETERS = 'action_parameters'
 PLAYER_ID = 'player_id'
 
 character = "DarkNinja"
-UPDATE_DELAY = 1
+UPDATE_DELAY = 0.2
 
 
 class GameClient:
@@ -198,7 +198,7 @@ class GameClient:
             if self.game.player:
                 x, y = self.game.player.x, self.game.player.y
                 self.send_move_action(x, y)
-                time.sleep(0.2)
+                time.sleep(self.update_delay)
 
     def start(self):
         """
