@@ -225,8 +225,11 @@ class GameClient:
 
 
 if __name__ == "__main__":
-    if random.randint(1, 3) == 1:
-        character = 'Eskimo'
-    pygame.init()
+    menu = GameLogic.MainMenu()
+    game_settings = menu.run()  # Run menu and get settings
+    print(game_settings)
+
+    # and now start the game with game settings
     client = GameClient(character, UPDATE_DELAY)
     client.start()
+
