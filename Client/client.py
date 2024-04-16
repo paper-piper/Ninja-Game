@@ -225,9 +225,10 @@ class GameClient:
 
 
 if __name__ == "__main__":
-    menu = GameLogic.MainMenu()
-    game_settings = menu.run()  # Run menu and get settings
-    print(game_settings)
+    pygame.init()
+    menu = GameLogic.Menu()
+    settings = menu.run()
+    print(settings)  # Print settings to verify
 
     # and now start the game with game settings
     client = GameClient(character, UPDATE_DELAY)

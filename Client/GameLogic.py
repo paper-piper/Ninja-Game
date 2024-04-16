@@ -31,7 +31,7 @@ pygame.display.set_caption("Tank Game")
 MAP_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
 COLLISION_IMAGE_PATH = r'../Assets/Map/UpdatedCollision.png'
 CHARACTER_STATS_FILE_PATH = r"../Characters.json"
-MAIN_MENU_IMAGE_PATH = r'../Assets/MainMenu/bg.png'
+MAIN_MENU_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
 
 # Music paths
 MAIN_MENU_MUSIC_PATH = r'../Assets/Music/1 - Adventure Begin.ogg'
@@ -519,137 +519,112 @@ def is_colliding_at(x, y):
     return not alpha == 0
 
 
-class MenuBase:
-    def __init__(self, screen, title, items, bg_image_path, music_path):
-        self.screen = screen
-        self.title = title
-        self.items = items
-        self.bg_image = pygame.image.load(bg_image_path)
-        pygame.mixer.music.load(music_path)
-        pygame.mixer.music.play(-1)  # Play music indefinitely
+class Menu:
+    def __init__(self):
+        self.screen = SCREEN
         self.font = FONT
+        self.title_font = pygame.font.Font(NORMAL_FONT_PATH, 48)  # Larger font for the title
+        self.bg_image = pygame.image.load(MAIN_MENU_IMAGE_PATH)
+        pygame.mixer.music.load(MAIN_MENU_MUSIC_PATH)
+        pygame.mixer.music.play(-1)  # Play music indefinitely
+        self.settings = {'sound': 'on', 'difficulty': 'easy'}
+        self.current_menu = 'Main Menu'
+        self.title = "Ninja Game"  # Default title for the main menu
+        self.title_surface = self.font.render(self.title, True, (255, 255, 255))
+        self.title_rect = self.title_surface.get_rect(center=(self.screen.get_width() // 2, 30))
+        self.items = self.get_items(self.current_menu)
         self.texts = []
         self.rects = []
+        self.update_menu_items()
 
-        title_surface = self.font.render(self.title, True, (255, 255, 255))
-        title_rect = title_surface.get_rect(center=(screen.get_width() // 2, 50))
-        self.texts.append(title_surface)
-        self.rects.append(title_rect)
+    def run(self):
+        running = True
+        while running:
+            self.screen.blit(self.bg_image, (0, 0))
+            self.screen.blit(self.title_surface, self.title_rect)
 
-        for item in items:
+            mouse_pos = pygame.mouse.get_pos()
+
+            # Iterate over menu items and create text surfaces on the fly
+            for index, item in enumerate(self.items):
+                if self.rects[index].collidepoint(mouse_pos):
+                    # Render highlighted text
+                    text_surface = self.font.render(item, True, (255, 0, 0))
+                else:
+                    # Render normal text
+                    text_surface = self.font.render(item, True, (255, 255, 255))
+                self.screen.blit(text_surface, self.rects[index])
+
+            pygame.display.flip()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:  # Left mouse click
+                        for i, rect in enumerate(self.rects):
+                            if rect.collidepoint(event.pos):
+                                running = self.handle_selection(i)
+
+        return self.settings
+
+    def get_items(self, menu_type):
+        if menu_type == 'Main Menu':
+            return ['Start Game', 'Settings', 'Exit']
+        elif menu_type == 'Settings':
+            return [
+                f"Sound: {'ON' if self.settings['sound'] == 'on' else 'OFF'}",
+                f"Difficulty: {self.settings['difficulty']}",
+                'Back to Main Menu'
+            ]
+
+    def update_menu_items(self):
+        # Set the title based on the current menu context
+        self.title = "Ninja Game" if self.current_menu == "Main Menu" else "Settings"
+        self.title_surface = self.title_font.render(self.title, True, (255, 255, 255))
+        self.title_rect = self.title_surface.get_rect(center=(self.screen.get_width() // 2, 30))
+
+        # Refresh items based on the current menu
+        self.items = self.get_items(self.current_menu)
+        self.texts = []
+        self.rects = []
+        for item in self.items:
             text_surface = self.font.render(item, True, (255, 255, 255))
-            text_rect = text_surface.get_rect(center=(
-                screen.get_width() // 2,
-                screen.get_height() // 2 + 40 * items.index(item))
-            )
             self.texts.append(text_surface)
+            # 300 is the going down factor
+            text_rect = text_surface.get_rect(center=(self.screen.get_width() // 2, 300 + 50 * self.items.index(item)))
             self.rects.append(text_rect)
 
-    def run(self):
-        running = True
-        while running:
-            self.screen.blit(self.bg_image, (0, 0))
-            self.render_menu_items()
-            pygame.display.flip()
+    def handle_selection(self, index):
+        if self.current_menu == 'Main Menu':
+            selection = self.items[index]
+            if selection == 'Start Game':
+                return False  # Exit menu when starting the game
+            elif selection == 'Settings':
+                self.current_menu = 'Settings'  # Switch to settings menu
+                self.update_menu_items()
+            elif selection == 'Exit':
+                pygame.quit()
+                sys.exit()
+        elif self.current_menu == 'Settings':
+            selection = self.items[index]
+            if selection == 'Back to Main Menu':
+                self.current_menu = 'Main Menu'  # Switch back to main menu
+                self.update_menu_items()
+            else:
+                if ':' in selection:
+                    key, _ = selection.split(': ')
+                    if key == 'Sound':
+                        self.settings['sound'] = 'off' if self.settings['sound'] == 'on' else 'on'
+                    elif key == 'Difficulty':
+                        self.settings['difficulty'] = 'hard' if self.settings['difficulty'] == 'easy' else 'easy'
+                    self.update_menu_items()  # Reflect changes in the menu items
+        return True  # Continue showing the menu
 
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:  # Left mouse click
-                        if self.handle_click(event.pos):
-                            running = False
-
-    def render_menu_items(self):
-        mouse_pos = pygame.mouse.get_pos()
-        for i, (text_surface, rect) in enumerate(zip(self.texts, self.rects)):
-            if rect.collidepoint(mouse_pos) and i > 0:  # Skip title for interaction
-                text_surface = self.font.render(self.items[i-1], True, (255, 0, 0))
-            self.screen.blit(text_surface, rect)
-
-    def handle_click(self, mouse_pos):
-        for i, rect in enumerate(self.rects):
-            if rect.collidepoint(mouse_pos) and i > 0:  # Skip title for interaction
-                if not self.on_select(i - 1):
-                    return True  # Return True if the selection says to exit
-        return False  # Always return False otherwise, meaning do not exit the loop
-
-    def on_select(self, index):
-        # To be overridden by subclasses
-        pass
-
-
-class MainMenu(MenuBase):
-    def __init__(self):
-        super().__init__(SCREEN, "Main Menu", ['Start Game', 'Settings', 'Exit'], MAIN_MENU_IMAGE_PATH, MAIN_MENU_MUSIC_PATH)
-        self.settings = {'sound': 'on', 'difficulty': 'easy'}
-
-    def on_select(self, index):
-        menu_items = ['Start Game', 'Settings', 'Exit']
-        selection = menu_items[index]
-        if selection == 'Start Game':
-            return True  # Exit menu when starting the game
-        elif selection == 'Settings':
-            settings_menu = SettingsMenu(self.settings)
-            self.settings = settings_menu.run()  # Capture updated settings after settings menu runs
-        elif selection == 'Exit':
-            pygame.quit()
-            sys.exit()
-        return False  # Continue showing the main menu if not exiting
-
-
-class SettingsMenu(MenuBase):
-    def __init__(self, settings):
-        super().__init__(SCREEN,
-                         "Settings",
-                         [f"Sound: {'ON' if settings['sound'] == 'on' else 'OFF'}",
-                          f"Difficulty: {settings['difficulty']}", 'Back to Main Menu'],
-                         MAIN_MENU_IMAGE_PATH,
-                         MAIN_MENU_MUSIC_PATH
-                         )
-        self.settings = settings
-
-    def run(self):
-        running = True
-        while running:
-            self.screen.blit(self.bg_image, (0, 0))
-            self.render_menu_items()
-            pygame.display.flip()
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:  # Left mouse click
-                        # Check if any item was clicked, if not, continue running
-                        if not self.handle_click(event.pos):
-                            running = False
-
-        return self.settings  # Return the updated settings
-
-    def on_select(self, index):
-        options = ['Sound', 'Difficulty', 'Back to Main Menu']
-        selection = options[index]
-        if selection == 'Back to Main Menu':
-            return False  # Return False to exit the menu
-        elif selection == 'Sound':
-            self.settings['sound'] = 'off' if self.settings['sound'] == 'on' else 'on'
-        elif selection == 'Difficulty':
-            self.settings['difficulty'] = 'hard' if self.settings['difficulty'] == 'easy' else 'easy'
-        self.update_items()
-        return True  # Return True to continue showing the settings menu
-
-    def update_items(self):
-        self.items = [f"Sound: {'ON' if self.settings['sound'] == 'on' else 'OFF'}",
-                      f"Difficulty: {self.settings['difficulty']}",
-                      'Back to Main Menu']
-        for i, item in enumerate(self.items):
-            self.texts[i+1] = self.font.render(item, True, (255, 255, 255))  # +1 to skip title
-
-
-if __name__ == '__main__':
+# Example usage
+if __name__ == "__main__":
     pygame.init()
-    menu = MainMenu()
-    menu.run()
+    menu = Menu()
+    settings = menu.run()
+    print(settings)  # Print settings to verify
