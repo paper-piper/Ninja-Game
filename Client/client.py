@@ -2,9 +2,9 @@ import random
 import socket
 import json
 import time
-
 import pygame
-import GameLogic
+import gameMenu
+import Game
 from threading import Thread
 import logging
 from queue import Queue
@@ -39,7 +39,7 @@ class GameClient:
         """
         Initialize the client with the server's IP address and port, and set up game and networking components.
         """
-        self.game = GameLogic.Game()
+        self.game = Game.Game()
         self.server_ip = SERVER_IP
         self.server_port = SERVER_PORT
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -226,11 +226,13 @@ class GameClient:
 
 if __name__ == "__main__":
     pygame.init()
-    menu = GameLogic.Menu()
+    menu = gameMenu.Menu()
     settings = menu.run()
     print(settings)  # Print settings to verify
 
     # and now start the game with game settings
+    if random.randint(1, 3) == 2:
+        character = 'Eskimo'
     client = GameClient(character, UPDATE_DELAY)
     client.start()
 
