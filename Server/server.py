@@ -102,6 +102,7 @@ class CommandsServer:
             logger.error(f"caught expedition: {e}")
 
     def cleanup_client(self, player_id):
+        # TODO: integrate this function when client sends 'close' message or isn't active for some time
         if player_id in self.clients:
             self.clients[player_id].close()
             del self.clients[player_id]

@@ -222,8 +222,6 @@ class Game:
     def update(self):
         # This method will be called by the server to update the game state
         self.update_bullets()
-        #self.draw_game_objects()
-        # pygame.display.flip()
 
     def move_camera(self, direction):
         # Call the camera's update method with the specified direction
@@ -243,7 +241,7 @@ class Game:
             CHARACTER_HEIGHT
         )
         self.players[player_id] = player
-        logger.info(f"Created new player ({character_name}) in x = {x}, y = {y}")
+        # logger.info(f"Created new player ({character_name}) in x = {x}, y = {y}")
         return x, y
 
     def find_random_free_position(self, character_width, character_height):
@@ -289,8 +287,11 @@ class Game:
                 bullet.move()  # Assuming 'move' method updates the bullet's position
 
                 # Check if the bullet is out of bounds or hits another player
-                if not self.within_bounds(bullet) or self.check_bullet_hit(player_id, bullet):
+                if not self.within_bounds(bullet):
                     player.bullets.remove(bullet)
+                if self.check_bullet_hit(player_id, bullet):
+                    player.bullets.remove(bullet)
+                    logger.info(f"Detected player hit! on player id {player_id}")
 
     def within_bounds(self, bullet):
         return 0 <= bullet.x <= self.map_width and 0 <= bullet.y <= self.map_height

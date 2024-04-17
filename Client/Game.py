@@ -348,7 +348,7 @@ class Game:
         self.players[player_id] = player
         if player_id == '0':
             self.player = player
-        logger.info(f"Created new player ({character_name}) in x = {x}, y = {y}")
+        # logger.info(f"Created new player ({character_name}) in x = {x}, y = {y}")
 
     def delete_player(self, player_id):
         if player_id in self.players:

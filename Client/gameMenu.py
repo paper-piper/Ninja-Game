@@ -1,6 +1,8 @@
 import pygame
 import sys
 
+pygame.init()
+
 MAIN_MENU_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
 
 # Music paths
