@@ -225,14 +225,15 @@ class GameClient:
 
 
 if __name__ == "__main__":
+    """
     pygame.init()
     menu = gameMenu.Menu()
     settings = menu.run()
     print(settings)  # Print settings to verify
+    """
 
     # and now start the game with game settings
-    if random.randint(1, 3) == 2:
-        character = 'Eskimo'
+    character = 'MaskFrog'
     client = GameClient(character, UPDATE_DELAY)
     client.start()
 
