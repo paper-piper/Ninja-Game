@@ -1,3 +1,5 @@
+from queue import Queue
+
 import pygame
 from PIL import Image
 import math
@@ -221,7 +223,8 @@ class Game:
 
     def update(self):
         # This method will be called by the server to update the game state
-        self.update_bullets()
+        bullet_hits = self.update_bullets()
+        return bullet_hits
 
     def move_camera(self, direction):
         # Call the camera's update method with the specified direction
@@ -282,6 +285,7 @@ class Game:
         return True
 
     def update_bullets(self):
+        bullet_hits = []
         for player_id, player in self.players.items():
             for bullet in player.bullets[:]:
                 bullet.move()  # Assuming 'move' method updates the bullet's position
@@ -292,6 +296,9 @@ class Game:
                 if self.check_bullet_hit(player_id, bullet):
                     player.bullets.remove(bullet)
                     logger.info(f"Detected player hit! on player id {player_id}")
+                    bullet_hits.append((player_id, bullet.damage))
+
+        return bullet_hits
 
     def within_bounds(self, bullet):
         return 0 <= bullet.x <= self.map_width and 0 <= bullet.y <= self.map_height
@@ -359,9 +366,12 @@ def check_collision(x, y, width, height):
 
 
 def is_colliding_at(x, y):
-    int_x = int(x)
-    int_y = int(y)
-    pixel_color = collision_map.getpixel((int_x, int_y))
-    # Assuming the image has an alpha channel, the alpha value will be the 4th element
-    alpha = pixel_color[3] if len(pixel_color) == 4 else 255  # Assuming opaque if no alpha channel
-    return not alpha == 0
+    try:
+        int_x = int(x)
+        int_y = int(y)
+        pixel_color = collision_map.getpixel((int_x, int_y))
+        # Assuming the image has an alpha channel, the alpha value will be the 4th element
+        alpha = pixel_color[3] if len(pixel_color) == 4 else 255  # Assuming opaque if no alpha channel
+        return not alpha == 0
+    except Exception as e:
+        return True

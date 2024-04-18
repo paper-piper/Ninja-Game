@@ -61,8 +61,19 @@ class CommandsServer:
                 player_id, action = self.action_queue.get()
                 self.process_action(player_id, action)
 
-            self.game.update()
+            bullet_hits = self.game.update()
+            for bullet_hit in bullet_hits:
+                self.handle_hit(bullet_hit)
             pygame.time.Clock().tick(60)
+
+    def handle_hit(self, bullet_hit):
+        player_id = bullet_hit[0]
+        bullet_damage = bullet_hit[1]
+        action = {'type': HIT_PLAYER,
+                  'action_parameters': [bullet_damage],
+                  }
+        self.broadcast_game_action(player_id, action)
+        print("Detected and sent hit!")
 
     def process_action(self, player_id, action):
         try:

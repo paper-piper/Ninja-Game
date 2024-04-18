@@ -24,7 +24,7 @@ class Menu:
         self.title_font = pygame.font.Font(NORMAL_FONT_PATH, 48)  # Larger font for the title
         self.bg_image = pygame.image.load(MAIN_MENU_IMAGE_PATH)
         pygame.mixer.music.load(MAIN_MENU_MUSIC_PATH)
-        pygame.mixer.music.play(-1)  # Play music indefinitely
+        # pygame.mixer.music.play(-1)  # Play music indefinitely
         self.settings = {'sound': 'on', 'difficulty': 'easy'}
         self.character = "Shadow"  # defualt character
         self.current_menu = 'Main Menu'
@@ -65,7 +65,7 @@ class Menu:
                         for i, rect in enumerate(self.rects):
                             if rect.collidepoint(event.pos):
                                 running = self.handle_selection(i)
-        pygame.mixer.music.stop()
+        # pygame.mixer.music.stop()
         return self.settings, self.character
 
     def get_items(self, menu_type):

@@ -420,7 +420,7 @@ class Game:
                 if bullet.move():  # Moving the bullet and checking collision in the same time
                     player.bullets.remove(bullet)
                 # Check if the bullet is out of bounds or hits another player
-                elif not self.within_bounds(bullet) or self.check_bullet_hit(player_id, bullet):
+                elif not self.within_bounds(bullet):  #  or self.check_bullet_hit(player_id, bullet):
                     player.bullets.remove(bullet)
 
     def within_bounds(self, bullet):

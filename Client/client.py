@@ -24,6 +24,8 @@ SERVER_PORT = 12345
 MOVE_PLAYER = "move"
 SHOOT_PLAYER = "shot"
 CREATE_PLAYER = "player_init"
+HIT_PLAYER = "hit"
+
 
 # Server response keys
 ACTION_TYPE = 'type'
@@ -185,6 +187,11 @@ class GameClient:
 
                 elif action_type == SHOOT_PLAYER:
                     self.game.shoot_player(player_id, *action_parameters)
+
+                elif action_type == HIT_PLAYER:
+                    self.game.players[player_id].take_damage(action_parameters[0])
+                    print(f"He was shot! {action_parameters}")
+
         except Exception as e:
             logger.error(f"Error processing action queue: {e}")
 
