@@ -55,6 +55,12 @@ hearts_file_path = r"../Assets/GUI/Hearts.png"
 heart_width = 16
 heart_height = 13
 
+# Load music and sounds effects
+hit_sound_path = r"../Assets/SoundEffects/Hit.wav"
+pygame.mixer.init()
+hit_sound = pygame.mixer.Sound(hit_sound_path)
+
+
 class Camera:
     def __init__(self, width, height):
         """
@@ -236,7 +242,8 @@ class Player:
         self.hp -= damage
         if self.hp <= 0:
             self.hp = 0
-            # Handle player death here if needed
+        hit_sound.play()
+        # Handle player death here if needed
 
 
 class Bullet:
@@ -425,13 +432,6 @@ class Game:
 
     def within_bounds(self, bullet):
         return 0 <= bullet.x <= self.map_width and 0 <= bullet.y <= self.map_height
-
-    def check_bullet_hit(self, shooter_id, bullet):
-        for player_id, player in self.players.items():
-            if player_id != shooter_id and player.rect.collidepoint(bullet.x, bullet.y):
-                player.take_damage(bullet.damage)
-                return True  # Bullet hit a player
-        return False  # No hit detected
 
     def draw_game_objects(self):
         """
