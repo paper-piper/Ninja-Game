@@ -30,7 +30,6 @@ ACTION_TYPE = 'type'
 ACTION_PARAMETERS = 'action_parameters'
 PLAYER_ID = 'player_id'
 
-character = "DarkNinja"
 UPDATE_DELAY = 0.2
 
 
@@ -225,15 +224,11 @@ class GameClient:
 
 
 if __name__ == "__main__":
-    """
     pygame.init()
     menu = gameMenu.Menu()
-    settings = menu.run()
+    settings, character = menu.run()
     print(settings)  # Print settings to verify
-    """
 
-    # and now start the game with game settings
-    character = 'MaskFrog'
     client = GameClient(character, UPDATE_DELAY)
     client.start()
 

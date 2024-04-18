@@ -1,5 +1,6 @@
 import pygame
 import sys
+import os
 
 pygame.init()
 
@@ -25,6 +26,7 @@ class Menu:
         pygame.mixer.music.load(MAIN_MENU_MUSIC_PATH)
         pygame.mixer.music.play(-1)  # Play music indefinitely
         self.settings = {'sound': 'on', 'difficulty': 'easy'}
+        self.character = "Shadow"  # defualt character
         self.current_menu = 'Main Menu'
         self.title = "Ninja Game"  # Default title for the main menu
         self.title_surface = self.font.render(self.title, True, (255, 255, 255))
@@ -64,7 +66,7 @@ class Menu:
                             if rect.collidepoint(event.pos):
                                 running = self.handle_selection(i)
         pygame.mixer.music.stop()
-        return self.settings
+        return self.settings, self.character
 
     def get_items(self, menu_type):
         if menu_type == 'Main Menu':
@@ -97,6 +99,9 @@ class Menu:
         if self.current_menu == 'Main Menu':
             selection = self.items[index]
             if selection == 'Start Game':
+                # create character select and then return
+                character_select = CharacterSelectMenu(self.screen)
+                self.character = character_select.run()
                 return False  # Exit menu when starting the game
             elif selection == 'Settings':
                 self.current_menu = 'Settings'  # Switch to settings menu
@@ -118,3 +123,105 @@ class Menu:
                         self.settings['difficulty'] = 'hard' if self.settings['difficulty'] == 'easy' else 'easy'
                     self.update_menu_items()  # Reflect changes in the menu items
         return True  # Continue showing the menu
+
+
+class CharacterSelectMenu:
+    def __init__(self, screen):
+        self.screen = screen
+        self.font = pygame.font.Font(NORMAL_FONT_PATH, 24)  # Smaller font for character names
+        self.title_font = pygame.font.Font(NORMAL_FONT_PATH, 48)
+        self.bg_image = pygame.image.load(MAIN_MENU_IMAGE_PATH)
+        self.title = "Select Character"
+        self.title_surface = self.title_font.render(self.title, True, (255, 255, 255))
+        self.title_rect = self.title_surface.get_rect(center=(screen_width // 2, 30))
+
+        # Setup character grid
+        self.characters = self.get_characters()  # This function needs to be defined to load character info
+        self.card_size = (130, 170)  # width, height
+        self.grid_origin = (50, 100)  # x, y starting point of the grid
+        self.grid_spacing = (10, 10)  # horizontal, vertical spacing
+        self.card_background_color = (100, 100, 100)
+        self.card_hover_color = (255, 0, 0)
+        self.cards = []
+        self.setup_cards()
+
+    def setup_cards(self):
+        for i in range(10):  # Assuming 10 characters, arranged in 5x2 grid
+            row = i % 2
+            col = i // 2
+            x = self.grid_origin[0] + col * (self.card_size[0] + self.grid_spacing[0])
+            y = self.grid_origin[1] + row * (self.card_size[1] + self.grid_spacing[1])
+            card_rect = pygame.Rect(x, y, *self.card_size)
+            self.cards.append((self.characters[i], card_rect))
+
+    def get_characters(self):
+        characters_path = '../Assets/Characters'
+        characters = []
+        # List directories in the characters path
+        for character_name in os.listdir(characters_path):
+            character_folder = os.path.join(characters_path, character_name)
+            if os.path.isdir(character_folder):
+                image_path = os.path.join(character_folder, 'Faceset.png')
+                # Check if the image file exists
+                if os.path.isfile(image_path):
+                    characters.append({
+                        'name': character_name,
+                        'image_path': image_path,
+                        'scaled_image': self.scale_image(image_path, 3)
+                    })
+        return characters
+
+    def scale_image(self, image_path, scale_factor):
+        # Load the image
+        image = pygame.image.load(image_path)
+        # Scale the image by the given factor
+        original_size = image.get_rect().size
+        scaled_size = (original_size[0] * scale_factor, original_size[1] * scale_factor)
+        scaled_image = pygame.transform.scale(image, scaled_size)
+        return scaled_image
+
+    def run(self):
+        running = True
+        while running:
+            self.screen.blit(self.bg_image, (0, 0))
+            self.screen.blit(self.title_surface, self.title_rect)
+            mouse_pos = pygame.mouse.get_pos()
+
+            for character, card_rect in self.cards:
+                if card_rect.collidepoint(mouse_pos):
+                    color = self.card_hover_color
+                else:
+                    color = self.card_background_color
+                pygame.draw.rect(self.screen, color, card_rect)
+
+                # Use the pre-scaled image
+                character_image = character['scaled_image']
+                image_rect = character_image.get_rect(
+                    center=(card_rect.centerx, card_rect.top + character_image.get_height() // 2 + 10))
+                self.screen.blit(character_image, image_rect)
+                # Render character name
+                text_surface = self.font.render(character['name'], True, (255, 255, 255))
+                text_rect = text_surface.get_rect(center=(card_rect.centerx, card_rect.bottom - 20))
+                self.screen.blit(text_surface, text_rect)
+
+            pygame.display.flip()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:  # Left mouse click
+                        for character, card_rect in self.cards:
+                            if card_rect.collidepoint(event.pos):
+                                return character['name']  # Return selected character name and exit
+
+        return None
+
+
+if __name__ == "__main__":
+    pygame.init()
+    menu = Menu()
+    settings, character_name = menu.run()
+    print(character_name)
+    print(settings)  # Print settings to verify

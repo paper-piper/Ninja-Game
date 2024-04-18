@@ -1,7 +1,7 @@
 {
     "characters": [
         {
-            "name": "BlueSamurai",
+            "name": "Master",
             "hp": 110,
             "speed": 4,
             "bullet_speed": 8,
@@ -10,7 +10,7 @@
             "shooting_cooldown": 120
         },
         {
-            "name": "DarkNinja",
+            "name": "Shadow",
             "hp": 120,
             "speed": 3,
             "bullet_speed": 10,
@@ -28,7 +28,7 @@
             "shooting_cooldown": 45
         },
         {
-            "name": "GoldKnight",
+            "name": "Radiant",
             "hp": 140,
             "speed": 2,
             "bullet_speed": 7,
@@ -46,7 +46,7 @@
             "shooting_cooldown": 100
         },
         {
-            "name": "MaskFrog",
+            "name": "Frog",
             "hp": 90,
             "speed": 5,
             "bullet_speed": 12,

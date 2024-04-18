@@ -371,7 +371,7 @@ class Game:
         self.camera = Camera(self.map_width, self.map_height)
 
         # Character selection (pseudo-code)
-        chosen_character_name = "DarkNinja"  # Example character selection
+        chosen_character_name = "Shadow"  # Example character selection
         character = load_character_from_json(CHARACTER_STATS_FILE_PATH, chosen_character_name)
 
         self.player = Player(
