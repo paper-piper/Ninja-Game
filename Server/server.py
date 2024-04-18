@@ -80,8 +80,7 @@ class CommandsServer:
             action_type = action['type']
             if action_type == MOVE_PLAYER:
                 player_x, player_y = action['action_parameters'][0], action['action_parameters'][1]
-                self.game.players[player_id].x = player_x
-                self.game.players[player_id].y = player_y
+                self.game.set_cords(player_id, player_x, player_y)
             elif action_type == SHOOT_PLAYER:
                 dx, dy = action['action_parameters']  # Unpacking the parameters
                 self.game.shoot_player(player_id, dx, dy)

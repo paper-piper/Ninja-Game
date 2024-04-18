@@ -115,6 +115,12 @@ class Player:
         self.bullet_damage = character.bullet_damage
         self.shooting_cooldown = character.shooting_cooldown
 
+    def set_cords(self, x, y):
+        self.x = x
+        self.y = y
+        self.rect.x = self.x
+        self.rect.y = self.y
+
     def move(self, direction):
         dx = dy = 0
         if direction == 'left':
@@ -274,6 +280,10 @@ class Game:
         if player_id in self.players:
             self.players[player_id].move(direction)
 
+    def set_cords(self, player_id, x,y):
+        if player_id in self.players:
+            self.players[player_id].set_cords(x, y)
+
     def shoot_player(self, player_id, dx, dy):
         if player_id in self.players:
             self.players[player_id].shoot(dx, dy)
@@ -293,10 +303,11 @@ class Game:
                 # Check if the bullet is out of bounds or hits another player
                 if not self.within_bounds(bullet):
                     player.bullets.remove(bullet)
-                if self.check_bullet_hit(player_id, bullet):
+                hit_player_id = self.check_bullet_hit(player_id, bullet)
+                if hit_player_id:
                     player.bullets.remove(bullet)
-                    logger.info(f"Detected player hit! on player id {player_id}")
-                    bullet_hits.append((player_id, bullet.damage))
+                    logger.info(f"Detected player hit! on player id {hit_player_id}")
+                    bullet_hits.append((hit_player_id, bullet.damage))
 
         return bullet_hits
 
@@ -307,8 +318,8 @@ class Game:
         for player_id, player in self.players.items():
             if player_id != shooter_id and player.rect.collidepoint(bullet.x, bullet.y):
                 player.take_damage(bullet.damage)
-                return True  # Bullet hit a player
-        return False  # No hit detected
+                return player_id  # Bullet hit a player
+        return None  # No hit detected
 
     def get_player(self, player_id):
         return self.players[player_id]
