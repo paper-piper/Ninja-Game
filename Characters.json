@@ -2,7 +2,7 @@
     "characters": [
         {
             "name": "Master",
-            "hp": 110,
+            "hp": 16,
             "speed": 4,
             "bullet_speed": 8,
             "bullet_damage": 35,
@@ -11,7 +11,7 @@
         },
         {
             "name": "Shadow",
-            "hp": 120,
+            "hp": 16,
             "speed": 3,
             "bullet_speed": 10,
             "bullet_damage": 40,
@@ -20,7 +20,7 @@
         },
         {
             "name": "Eskimo",
-            "hp": 100,
+            "hp": 16,
             "speed": 2,
             "bullet_speed": 20,
             "bullet_damage": 10,
@@ -29,7 +29,7 @@
         },
         {
             "name": "Radiant",
-            "hp": 140,
+            "hp": 16,
             "speed": 2,
             "bullet_speed": 7,
             "bullet_damage": 45,
@@ -38,7 +38,7 @@
         },
         {
             "name": "Knight",
-            "hp": 130,
+            "hp": 16,
             "speed": 2,
             "bullet_speed": 9,
             "bullet_damage": 30,
@@ -47,7 +47,7 @@
         },
         {
             "name": "Frog",
-            "hp": 90,
+            "hp": 16,
             "speed": 5,
             "bullet_speed": 12,
             "bullet_damage": 25,
@@ -56,7 +56,7 @@
         },
         {
             "name": "Noble",
-            "hp": 110,
+            "hp": 16,
             "speed": 3,
             "bullet_speed": 15,
             "bullet_damage": 20,
@@ -65,7 +65,7 @@
         },
         {
             "name": "Princess",
-            "hp": 80,
+            "hp": 16,
             "speed": 4,
             "bullet_speed": 25,
             "bullet_damage": 15,
@@ -74,7 +74,7 @@
         },
         {
             "name": "Samurai",
-            "hp": 115,
+            "hp": 16,
             "speed": 3,
             "bullet_speed": 11,
             "bullet_damage": 38,
@@ -83,7 +83,7 @@
         },
         {
             "name": "Villager",
-            "hp": 85,
+            "hp": 16,
             "speed": 3,
             "bullet_speed": 18,
             "bullet_damage": 12,

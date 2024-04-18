@@ -2,7 +2,6 @@ import pygame
 from PIL import Image
 import math
 import json
-import sys
 import logging
 
 # Initialize pygame
@@ -42,16 +41,19 @@ FONT = pygame.font.Font(NORMAL_FONT_PATH, 36)  # Set the font for the menu text
 
 MAP_WIDTH = 0
 MAP_HEIGHT = 0
+
 # Load images
 map_image = pygame.image.load(MAP_IMAGE_PATH).convert_alpha()
 collision_map = pygame.image.load(COLLISION_IMAGE_PATH).convert_alpha()
 
 # player qualities
-player_speed = 4
 CHARACTER_WIDTH = 32
 CHARACTER_HEIGHT = 32
-SHOOTING_CHANCE = 0.05
 
+# GUI paths
+hearts_file_path = r"../Assets/GUI/Hearts.png"
+heart_width = 16
+heart_height = 13
 
 class Camera:
     def __init__(self, width, height):
@@ -160,6 +162,7 @@ class Player:
 
         # character qualities
         self.speed = character.speed
+        self.max_hp = character.hp
         self.hp = character.hp
         self.bullet_speed = character.bullet_speed
         self.bullet_image = character.bullet_image
@@ -321,12 +324,51 @@ class Game:
         try:
             self.update_bullets()
             self.draw_game_objects()
-            pygame.display.flip()
             if self.player:
                 self.camera.follow_target(self.player)
-                pass
+                self.draw_player_gui()
+            pygame.display.flip()
+
         except Exception as e:
             logger.error(f"Error updating game state: {e}")
+
+    def draw_player_gui(self):
+        hearts_surface = pygame.image.load(hearts_file_path)
+        scale_factor = 3
+
+        # Scale dimensions
+        scaled_heart_width = heart_width * scale_factor
+        scaled_heart_height = heart_height * scale_factor
+
+        # Scale the image surface
+        hearts_surface = pygame.transform.scale(hearts_surface, (heart_width * 5 * scale_factor, heart_height * scale_factor))
+
+        # Calculate number of hearts to display
+        num_full_hearts = self.player.hp // 4
+        partial_heart = self.player.hp % 4
+        num_empty_hearts = (self.player.max_hp // 4) - num_full_hearts - (1 if partial_heart > 0 else 0)
+
+        # Coordinates to draw the hearts
+        x = 10  # starting x position (10 pixels from the left)
+        y = self.screen.get_height() - scaled_heart_height - 10  # 10 pixels above the bottom
+
+        # Draw full hearts
+        for i in range(num_full_hearts):
+            full_heart_rect = pygame.Rect(0, 0, scaled_heart_width, scaled_heart_height)
+            self.screen.blit(hearts_surface, (x, y), full_heart_rect)
+            x += scaled_heart_width
+
+        # Draw partial heart if any
+        if partial_heart > 0:
+            partial_heart_rect = pygame.Rect((4 - partial_heart) * scaled_heart_width, 0, scaled_heart_width, scaled_heart_height)
+            self.screen.blit(hearts_surface, (x, y), partial_heart_rect)
+            x += scaled_heart_width
+
+        # Draw empty hearts
+        for i in range(num_empty_hearts):
+            empty_heart_rect = pygame.Rect(4 * scaled_heart_width, 0, scaled_heart_width, scaled_heart_height)
+            self.screen.blit(hearts_surface, (x, y), empty_heart_rect)
+            x += scaled_heart_width
 
     def create_player(self, player_id, character_name, x, y):
         """
