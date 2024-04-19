@@ -36,11 +36,11 @@ UPDATE_DELAY = 0.2
 
 
 class GameClient:
-    def __init__(self, character_name, update_delay):
+    def __init__(self, character_name, update_delay, audio):
         """
         Initialize the client with the server's IP address and port, and set up game and networking components.
         """
-        self.game = Game.Game()
+        self.game = Game.Game(audio)
         self.server_ip = SERVER_IP
         self.server_port = SERVER_PORT
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -236,6 +236,6 @@ if __name__ == "__main__":
     settings, character = menu.run()
     print(settings)  # Print settings to verify
 
-    client = GameClient(character, UPDATE_DELAY)
+    client = GameClient(character, UPDATE_DELAY, True if settings['sound'] == 'on' else False)
     client.start()
 

@@ -5,12 +5,20 @@ import random
 import threading
 
 pygame.init()
-
+pygame.mixer.init()
 MAIN_MENU_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
 
 # Music paths
 music_path = "../Assets/Music/Menu"
 stop_music = False
+
+# Sound effects
+accept_sound_path = '../Assets/SoundEffects/Menu/Accept.wav'
+accept2_sound_path = '../Assets/SoundEffects/Menu/Accept2.wav'
+cancel_sound_path = '../Assets/SoundEffects/Menu/Cancel.wav'
+accept_sound = pygame.mixer.Sound(accept_sound_path)
+accept2_sound = pygame.mixer.Sound(accept2_sound_path)
+cancel_sound = pygame.mixer.Sound(cancel_sound_path)
 
 # Font paths
 NORMAL_FONT_PATH = r'../Assets/font/NormalFont.ttf'
@@ -106,6 +114,7 @@ class Menu:
             selection = self.items[index]
             if selection == 'Start Game':
                 # create character select and then return
+                accept2_sound.play()
                 character_select = CharacterSelectMenu(self.screen)
                 self.character = character_select.run()
                 return False  # Exit menu when starting the game
@@ -225,6 +234,7 @@ class CharacterSelectMenu:
                     if event.button == 1:  # Left mouse click
                         for character, card_rect in self.cards:
                             if card_rect.collidepoint(event.pos):
+                                accept_sound.play()
                                 return character['name']  # Return selected character name and exit
 
         return None

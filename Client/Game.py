@@ -3,6 +3,9 @@ from PIL import Image
 import math
 import json
 import logging
+import os
+import random
+import threading
 
 # Initialize pygame
 pygame.init()
@@ -33,7 +36,7 @@ CHARACTER_STATS_FILE_PATH = r"../Characters.json"
 MAIN_MENU_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
 
 # Music paths
-
+MUSIC_PATH = "../Assets/Music/Game"
 # Font paths
 NORMAL_FONT_PATH = r'../Assets/font/NormalFont.ttf'
 FONT = pygame.font.Font(NORMAL_FONT_PATH, 36)  # Set the font for the menu text
@@ -55,7 +58,7 @@ heart_width = 16
 heart_height = 13
 
 # Load music and sounds effects
-hit_sound_path = r"../Assets/SoundEffects/Hit.wav"
+hit_sound_path = r"../Assets/SoundEffects/Game/Hit.wav"
 pygame.mixer.init()
 hit_sound = pygame.mixer.Sound(hit_sound_path)
 
@@ -308,18 +311,24 @@ class Bullet:
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, audio):
         """
         Initialize the game, setting up the map, camera, and player entities.
         """
         try:
+            if not audio:
+                pygame.mixer.music.set_volume(0)
             global MAP_WIDTH, MAP_HEIGHT
             MAP_WIDTH, MAP_HEIGHT = get_image_dimensions(MAP_IMAGE_PATH)
             self.screen = pygame.display.set_mode((screen_width, screen_height))
             self.map_width, self.map_height = MAP_WIDTH, MAP_HEIGHT
             self.camera = Camera(self.map_width, self.map_height)
             self.players = {}
+            self.stop_music = False
+            thread = threading.Thread(target=self.play_random_music)
+            thread.start()
             self.player = None
+
         except Exception as e:
             logger.error(f"Game initialization error: {e}")
 
@@ -426,8 +435,14 @@ class Game:
                 if bullet.move():  # Moving the bullet and checking collision in the same time
                     player.bullets.remove(bullet)
                 # Check if the bullet is out of bounds or hits another player
-                elif not self.within_bounds(bullet):  #  or self.check_bullet_hit(player_id, bullet):
+                elif not self.within_bounds(bullet) or self.check_bullet_hit(player_id, bullet):
                     player.bullets.remove(bullet)
+
+    def check_bullet_hit(self, shooter_id, bullet):
+        for player_id, player in self.players.items():
+            if player_id != shooter_id and player.rect.collidepoint(bullet.x, bullet.y):
+                return True  # Bullet hit a player
+        return False  # No hit detected
 
     def within_bounds(self, bullet):
         return 0 <= bullet.x <= self.map_width and 0 <= bullet.y <= self.map_height
@@ -468,6 +483,34 @@ class Game:
         dx = math.cos(angle) * self.player.bullet_speed  # Speed of the bullet
         dy = math.sin(angle) * self.player.bullet_speed  # Speed of the bullet
         return dx, dy
+
+    def play_random_music(self):
+
+        # Fetch all .wav files from the specified directory
+        music_files = [file for file in os.listdir(MUSIC_PATH) if file.endswith('.ogg')]
+        if not music_files:
+            print("No music files found in the directory.")
+            return
+
+        # Function to play a selected music file
+        def play_music():
+            # Randomly select a music file
+            selected_file = random.choice(music_files)
+            full_path = os.path.join(MUSIC_PATH, selected_file)
+
+            # Load and play the selected music file
+            pygame.mixer.music.load(full_path)
+            pygame.mixer.music.play()
+            print(f"Now playing: {selected_file}")
+
+        # Continue playing music
+        while not self.stop_music:
+            # Check if music is still playing
+            if not pygame.mixer.music.get_busy():
+                # If the song has ended, play the next song
+                play_music()
+            pygame.time.wait(5000)  # Check every five seconds
+        pygame.mixer.music.stop()
 
 
 def display_end_screen(result):
