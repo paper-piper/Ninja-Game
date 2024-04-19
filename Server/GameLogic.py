@@ -1,8 +1,5 @@
-from queue import Queue
-
 import pygame
 from PIL import Image
-import math
 import json
 import random
 import logging
@@ -232,11 +229,8 @@ class Game:
         bullet_hits = self.update_bullets()
         return bullet_hits
 
-    def move_camera(self, direction):
-        # Call the camera's update method with the specified direction
-        self.camera.update(direction)
-
     def create_player(self, player_id, character_name):
+        # TODO: fix this
         # x, y = self.find_random_free_position(CHARACTER_WIDTH, CHARACTER_HEIGHT)
         x, y = 20, 30
         if not x:
@@ -270,15 +264,11 @@ class Game:
                 return x, y  # Found a free spot
 
         # If no free spot is found after max_attempts, return None or raise an error
-        return None
+        return 20, 30
 
     def delete_player(self, player_id):
         if player_id in self.players:
             del self.players[player_id]
-
-    def move_player(self, player_id, direction):
-        if player_id in self.players:
-            self.players[player_id].move(direction)
 
     def set_cords(self, player_id, x,y):
         if player_id in self.players:
@@ -287,12 +277,6 @@ class Game:
     def shoot_player(self, player_id, dx, dy):
         if player_id in self.players:
             self.players[player_id].shoot(dx, dy)
-
-    def handle_events(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return False
-        return True
 
     def update_bullets(self):
         bullet_hits = []

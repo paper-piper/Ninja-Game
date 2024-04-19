@@ -58,9 +58,11 @@ heart_width = 16
 heart_height = 13
 
 # Load music and sounds effects
-hit_sound_path = r"../Assets/SoundEffects/Game/Hit.wav"
 pygame.mixer.init()
+hit_sound_path = r"../Assets/SoundEffects/Game/Hit.wav"
+kill_sound_path = r"../Assets/SoundEffects/Game/Kill.wav"
 hit_sound = pygame.mixer.Sound(hit_sound_path)
+kill_sound = pygame.mixer.Sound(kill_sound_path)
 
 
 class Camera:
@@ -117,6 +119,16 @@ class Camera:
 
 class Character:
     def __init__(self, name, hp, speed, bullet_speed, bullet_damage, bullet_lifespan, shooting_cooldown):
+        """
+        Initiate character qualities (from the Characters.json file). this is a part of the player class
+        :param name: character name
+        :param hp: character hp points
+        :param speed: character's number of pixels allowed to move every tick
+        :param bullet_speed: the number of pixels the bullet is moving every tick
+        :param bullet_damage: the damage the bullet causes
+        :param bullet_lifespan: the amount of ticks the bullet can go before getting deleted automatically
+        :param shooting_cooldown: how much time the user can wait before shooting again (kinda)
+        """
         self.name = name
         self.hp = hp
         self.speed = speed
@@ -125,10 +137,14 @@ class Character:
         self.bullet_lifespan = bullet_lifespan
         self.shooting_cooldown = shooting_cooldown
         self.bullet_image = pygame.image.load(f'../Assets/Characters/{name}/Weapon.png').convert_alpha()
-        self.faceset = pygame.image.load(f'../Assets/Characters/{name}/Faceset.png').convert_alpha()
         self.sprites = self.load_sprites(name)
 
     def load_sprites(self, name):
+        """
+        load the sprite images of some character
+        :param name: the character name
+        :return:
+        """
         sprite_sheet = pygame.image.load(f'../Assets/Characters/{name}/SeparateAnim/Walk.png').convert_alpha()
         sprites = {
             'down': [],
@@ -153,6 +169,14 @@ class Character:
 
 class Player:
     def __init__(self, character, x, y, width, height):
+        """
+        the actual in game object of the player
+        :param character: a character class instance with all the specific character qualities
+        :param x: the player's x coordinate
+        :param y: the player's y coordinate
+        :param width: the player's width (32)
+        :param height: the player's height (32)
+        """
         # game qualities
         self.x = x
         self.y = y
@@ -179,10 +203,20 @@ class Player:
         self.shooting_cooldown = character.shooting_cooldown
 
     def draw(self, camera):
+        """
+        draw the player into the screen
+        :param camera: the camera in which the player is drawn to
+        :return:
+        """
         frame = self.sprites[self.direction][self.anim_frame]
         SCREEN.blit(frame, camera.apply(self))
 
     def move(self, direction):
+        """
+        move the player to some direction by his speed
+        :param direction: to which direction to move (up, down, left, right)
+        :return:
+        """
         dx = dy = 0
         if direction == 'left':
             dx = -self.speed
@@ -215,6 +249,12 @@ class Player:
         self.rect.y = self.y
 
     def shoot(self, dx, dy):
+        """
+        make the player shoot a bullet
+        :param dx: the x vector of the bullet
+        :param dy: the y vector of the bullet
+        :return:
+        """
         current_time = pygame.time.get_ticks()
         if current_time - self.last_shot_time > self.shooting_cooldown:
             self.last_shot_time = current_time
@@ -241,15 +281,36 @@ class Player:
             )
 
     def take_damage(self, damage):
+        """
+        make player take damage
+        :param damage: the amount of damage
+        :return:
+        """
         self.hp -= damage
         if self.hp <= 0:
+            # Handle player death here if needed
+            kill_sound.play()
             self.hp = 0
-        hit_sound.play()
-        # Handle player death here if needed
+        else:
+            hit_sound.play()
 
 
 class Bullet:
     def __init__(self, x, y, dx, dy, radius, damage, owner, lifespan, sprite_sheet, frames_number=2):
+        """
+        Initialize a Bullet instance with position, movement, appearance, and behavior settings.
+        :param x: The initial x-coordinate of the bullet
+        :param y: The initial y-coordinate of the bullet
+        :param dx: The change in x-coordinate per frame
+        :param dy: The change in y-coordinate per frame
+        :param radius: The radius of the bullet
+        :param damage: The damage the bullet will cause on hit
+        :param owner: The entity that fired the bullet
+        :param lifespan: The number of frames before the bullet expires
+        :param sprite_sheet: The path to the sprite sheet image
+        :param frames_number: The number of frames in the sprite sheet (default is 2)
+        :return: None
+        """
         self.x = x
         self.y = y
         self.dx = dx
@@ -273,6 +334,12 @@ class Bullet:
         self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
 
     def load_bullet_sprites(self, sprite_sheet, frames_number):
+        """
+        Load and prepare bullet sprites from a sprite sheet.
+        :param sprite_sheet: The sprite sheet surface from which to extract bullet frames
+        :param frames_number: The number of frames in the sprite sheet
+        :return: A list of pygame.Surface objects each representing a frame of the bullet's animation
+        """
         frames = []  # Assuming that frames are laid out horizontally
         frame_width = sprite_sheet.get_width() // frames_number
         for i in range(frames_number):
@@ -283,6 +350,10 @@ class Bullet:
         return frames
 
     def move(self):
+        """
+        Update the bullet's position based on its speed and check for collision.
+        :return: Boolean indicating if a collision occurred (True if it did, False otherwise)
+        """
         self.lifespan -= 1  # Decrease lifespan each frame
         if self.lifespan <= 0:
             return True  # Signal to remove this bullet
@@ -304,6 +375,11 @@ class Bullet:
         return did_collide
 
     def draw(self, camera):
+        """
+        Draw the bullet on the screen at its current position.
+        :param camera: The camera handling the screen offset and focus
+        :return: None
+        """
         if self.image:
             SCREEN.blit(self.image, camera.apply(self).topleft)
         else:
@@ -313,7 +389,9 @@ class Bullet:
 class Game:
     def __init__(self, audio):
         """
-        Initialize the game, setting up the map, camera, and player entities.
+        Initialize the Game environment, setting up the audio, map, camera, and player entities.
+        :param audio: Boolean indicating whether the audio is enabled
+        :return: None
         """
         try:
             if not audio:
@@ -334,7 +412,8 @@ class Game:
 
     def update(self):
         """
-        Update the game state, including moving bullets and drawing game objects.
+        Update the game state by moving bullets, drawing game objects, and managing UI updates.
+        :return: None
         """
         try:
             self.update_bullets()
@@ -348,6 +427,10 @@ class Game:
             logger.error(f"Error updating game state: {e}")
 
     def draw_player_gui(self):
+        """
+        Draw the player's health interface on the game screen.
+        :return: None
+        """
         hearts_surface = pygame.image.load(hearts_file_path)
         scale_factor = 3
 
@@ -387,12 +470,12 @@ class Game:
 
     def create_player(self, player_id, character_name, x, y):
         """
-        player id 0 means itself
-        :param player_id:
-        :param character_name:
-        :param x:
-        :param y:
-        :return:
+        Create and register a new player in the game.
+        :param player_id: Unique identifier for the player
+        :param character_name: The name of the character model to load
+        :param x: The initial x-coordinate for the player
+        :param y: The initial y-coordinate for the player
+        :return: None
         """
         character = load_character_from_json(character_name)
         player = Player(
@@ -408,21 +491,39 @@ class Game:
         # logger.info(f"Created new player ({character_name}) in x = {x}, y = {y}")
 
     def delete_player(self, player_id):
+        """
+        Remove a player from the game based on their unique identifier.
+        :param player_id: The unique identifier of the player to remove
+        :return: None
+        """
         if player_id in self.players:
             del self.players[player_id]
 
     def move_player(self, player_id, direction):
+        """
+        Update the specified player's position based on the provided direction.
+        :param player_id: The unique identifier of the player to move
+        :param direction: The direction in which to move the player
+        :return: None
+        """
         if player_id in self.players:
             self.players[player_id].move(direction)
 
     def shoot_player(self, player_id, dx, dy):
+        """
+        Command a player to shoot a bullet in the specified direction.
+        :param player_id: The unique identifier of the shooting player
+        :param dx: The x-component of the bullet's velocity
+        :param dy: The y-component of the bullet's velocity
+        :return: None
+        """
         if player_id in self.players:
             self.players[player_id].shoot(dx, dy)
 
     def check_for_quit(self):
         """
-        checks for quiting game
-        :return:
+        Check if the game has received a quit event.
+        :return: Boolean indicating if the game should continue running (False if it should quit)
         """
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -430,6 +531,10 @@ class Game:
         return True
 
     def update_bullets(self):
+        """
+        Update the positions of all bullets, remove those that have collided or expired.
+        :return: None
+        """
         for player_id, player in self.players.items():
             for bullet in player.bullets[:]:
                 if bullet.move():  # Moving the bullet and checking collision in the same time
@@ -439,17 +544,29 @@ class Game:
                     player.bullets.remove(bullet)
 
     def check_bullet_hit(self, shooter_id, bullet):
+        """
+        Check if a bullet has hit any player other than the shooter.
+        :param shooter_id: The unique identifier of the player who shot the bullet
+        :param bullet: The bullet instance to check for collisions
+        :return: Boolean indicating if a hit was detected (True if it was, False otherwise)
+        """
         for player_id, player in self.players.items():
             if player_id != shooter_id and player.rect.collidepoint(bullet.x, bullet.y):
                 return True  # Bullet hit a player
         return False  # No hit detected
 
     def within_bounds(self, bullet):
+        """
+        Determine if a bullet is within the game's boundaries.
+        :param bullet: The bullet instance to check
+        :return: Boolean indicating if the bullet is within bounds (True if it is, False otherwise)
+        """
         return 0 <= bullet.x <= self.map_width and 0 <= bullet.y <= self.map_height
 
     def draw_game_objects(self):
         """
-        Draw all game objects, including players and bullets, to the screen.
+        Draw all game-related objects, including the map, players, and bullets, to the screen.
+        :return: None
         """
         try:
             self.screen.fill((255, 255, 255))
@@ -464,6 +581,10 @@ class Game:
             logger.error(f"Error drawing game objects: {e}")
 
     def get_mouse_angle(self):
+        """
+        Calculate the angle between the player's position and the mouse cursor position.
+        :return: A tuple (dx, dy) representing the direction vector for a bullet based on the calculated angle
+        """
         mx, my = pygame.mouse.get_pos()
 
         # Adjust the mouse coordinates based on the camera's offset
@@ -485,7 +606,10 @@ class Game:
         return dx, dy
 
     def play_random_music(self):
-
+        """
+        Continuously play random music tracks from a specified directory, handling track selection and looping.
+        :return: None
+        """
         # Fetch all .wav files from the specified directory
         music_files = [file for file in os.listdir(MUSIC_PATH) if file.endswith('.ogg')]
         if not music_files:
@@ -596,6 +720,12 @@ def check_collision(x, y, width, height):
 
 
 def is_colliding_at(x, y):
+    """
+    checking if some pixel is colliding with a map object
+    :param x: the pixel's x
+    :param y: the pixel's y
+    :return:
+    """
     int_x = int(x)
     int_y = int(y)
     pixel_color = collision_map.get_at((int_x, int_y))

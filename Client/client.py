@@ -36,9 +36,12 @@ UPDATE_DELAY = 0.2
 
 
 class GameClient:
-    def __init__(self, character_name, update_delay, audio):
+    def __init__(self, character_name, update_delay, audio) -> None:
         """
         Initialize the client with the server's IP address and port, and set up game and networking components.
+        :param character_name: the character in-game which you will play
+        :param update_delay: the delay between each movement update
+        :param audio: a bool which determent if to mute the game audio
         """
         self.game = Game.Game(audio)
         self.server_ip = SERVER_IP
@@ -51,26 +54,7 @@ class GameClient:
         self.character_name = character_name
         self.target_positions = {}
 
-    def connect_to_server(self):
-        """
-        Establish a connection to the game server using a TCP socket.
-        """
-        try:
-            self.client_socket.connect((self.server_ip, self.server_port))
-            logger.info("Connected to server successfully.")
-        except socket.error as e:
-            logger.error(f"Socket error occurred: {e}")
-        except Exception as e:
-            logger.exception(f"Failed to connect to server: {e}")
-
-    def get_character_name(self):
-        """
-        Retrieve the character name selected by the user.
-        :return string: The character name chosen by the user
-        """
-        return character
-
-    def send_character_init(self, character_name):
+    def send_character_init(self, character_name) -> None:
         """
         Send the initial character choice to the server.
         :param character_name: The name of the character chosen by the user
@@ -78,7 +62,7 @@ class GameClient:
         message = {'type': CREATE_PLAYER, 'action_parameters': [character_name]}
         self.send_message(message)
 
-    def send_move_action(self, x, y):
+    def send_move_action(self, x, y) -> None:
         """
         Send a movement action to the server, indicating the direction the player wishes to move.
         :param x:
@@ -88,7 +72,7 @@ class GameClient:
         message = {'type': MOVE_PLAYER, 'action_parameters': [x, y]}
         self.send_message(message)
 
-    def send_shoot_action(self, dx, dy):
+    def send_shoot_action(self, dx, dy) -> None:
         """
         Send a shoot action to the server, indicating the direction of the shot.
         :param dx: the x vector
@@ -97,7 +81,7 @@ class GameClient:
         message = {'type': SHOOT_PLAYER, 'action_parameters': [dx, dy]}
         self.send_message(message)
 
-    def send_message(self, message):
+    def send_message(self, message) -> None:
         """
         Serialize and send a message to the server.
         :param message: The message dictionary to send
@@ -114,16 +98,17 @@ class GameClient:
         except Exception as e:
             logger.error(f"Failed to send message: {e}")
 
-    def receive_game_update(self):
+    def receive_game_update(self) -> None:
         """
         Receive and process the updated game state from the server.
         """
         try:
-            # TODO: validate the message json file
-            message, _ = self.client_socket.recvfrom(1024)
-            game_update = json.loads(message.decode())
-            self.action_queue.put(game_update)
-            # logger.info(f"Received action from server: {game_update}")
+            while self.running:
+                # TODO: validate the message json file
+                message, _ = self.client_socket.recvfrom(1024)
+                game_update = json.loads(message.decode())
+                self.action_queue.put(game_update)
+                # logger.info(f"Received action from server: {game_update}")
         except socket.error:
             # happens all the time, don't need to worry
             return
@@ -132,7 +117,7 @@ class GameClient:
         except Exception as e:
             logger.error(f"Error receiving game state: {e}")
 
-    def handle_key_events(self):
+    def handle_key_events(self) -> None:
         """
         Process keyboard events and update the game object accordingly
         """
@@ -152,8 +137,11 @@ class GameClient:
         elif keys[pygame.K_s]:
             self.game.move_player('0', 'down')
 
-    def handle_movements(self):
-        # Update player positions towards their targets
+    def handle_movements(self) -> None:
+        """
+        in each tick of the game, move each player by a bit to the actual position
+        :return:
+        """
         for player_id, (target_x, target_y) in self.target_positions.items():
             current_x, current_y = self.game.players[player_id].x, self.game.players[player_id].y
             # Determine the direction to move based on target position
@@ -167,7 +155,7 @@ class GameClient:
             elif target_y < current_y:
                 self.game.move_player(player_id, 'up')
 
-    def process_action_queue(self):
+    def process_action_queue(self) -> None:
         """
         Process all pending actions from the server, updating game state accordingly.
         """
@@ -195,11 +183,11 @@ class GameClient:
         except Exception as e:
             logger.error(f"Error processing action queue: {e}")
 
-    def get_server_updates(self):
-        while self.running:
-            self.receive_game_update()
-
     def send_player_state(self):
+        """
+        in every update delay, send the player coordinates
+        :return:
+        """
         while self.running:
             if self.game.player:
                 x, y = self.game.player.x, self.game.player.y
@@ -212,7 +200,7 @@ class GameClient:
         """
         try:
             # constantly get updates from server and push methods into the action queue
-            Thread(target=self.get_server_updates).start()
+            Thread(target=self.receive_game_update).start()
             self.send_character_init(self.character_name)
 
             # every 0.2 second send the player's x and y coordinate

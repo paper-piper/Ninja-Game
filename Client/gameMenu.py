@@ -30,6 +30,10 @@ screen_height = 600
 
 class Menu:
     def __init__(self):
+        """
+        Initialize the main menu with screen settings, fonts, background image, and music settings.
+        :return: None
+        """
         self.screen = pygame.display.set_mode((screen_width, screen_height))
         self.font = FONT
         self.title_font = pygame.font.Font(NORMAL_FONT_PATH, 48)  # Larger font for the title
@@ -49,6 +53,10 @@ class Menu:
         self.update_menu_items()
 
     def run(self):
+        """
+        Run the main loop of the menu, handling user interactions and updating the display.
+        :return: Tuple containing the final settings and the selected character when the menu closes
+        """
         global stop_music
         running = True
         while running:
@@ -83,6 +91,11 @@ class Menu:
         return self.settings, self.character
 
     def get_items(self, menu_type):
+        """
+        Retrieve a list of menu items based on the current menu context.
+        :param menu_type: The current type of menu to generate items for (e.g., 'Main Menu', 'Settings')
+        :return: List of strings representing menu items
+        """
         if menu_type == 'Main Menu':
             return ['Start Game', 'Settings', 'Exit']
         elif menu_type == 'Settings':
@@ -93,6 +106,10 @@ class Menu:
             ]
 
     def update_menu_items(self):
+        """
+        Update menu items and their corresponding rendering properties based on the current menu context.
+        :return: None
+        """
         # Set the title based on the current menu context
         self.title = "Ninja Game" if self.current_menu == "Main Menu" else "Settings"
         self.title_surface = self.title_font.render(self.title, True, (255, 255, 255))
@@ -110,6 +127,11 @@ class Menu:
             self.rects.append(text_rect)
 
     def handle_selection(self, index):
+        """
+        Handle user selections in the menu based on the item selected.
+        :param index: The index of the selected item in the menu list
+        :return: Boolean indicating if the menu should continue running (True to continue, False to close)
+        """
         if self.current_menu == 'Main Menu':
             selection = self.items[index]
             if selection == 'Start Game':
@@ -147,6 +169,11 @@ class Menu:
 
 class CharacterSelectMenu:
     def __init__(self, screen):
+        """
+        Initialize the character selection menu with screen, fonts, background, and character grid settings.
+        :param screen: The Pygame display surface to draw the menu on
+        :return: None
+        """
         self.screen = screen
         self.font = pygame.font.Font(NORMAL_FONT_PATH, 24)  # Smaller font for character names
         self.title_font = pygame.font.Font(NORMAL_FONT_PATH, 48)
@@ -166,6 +193,10 @@ class CharacterSelectMenu:
         self.setup_cards()
 
     def setup_cards(self):
+        """
+        Set up the character cards on the menu grid, including positions and dimensions.
+        :return: None
+        """
         for i in range(10):  # Assuming 10 characters, arranged in 5x2 grid
             row = i % 2
             col = i // 2
@@ -175,6 +206,10 @@ class CharacterSelectMenu:
             self.cards.append((self.characters[i], card_rect))
 
     def get_characters(self):
+        """
+        Load character information from the assets directory, including names and images.
+        :return: List of dictionaries, each containing a character's name, image path, and scaled image
+        """
         characters_path = '../Assets/Characters'
         characters = []
         # List directories in the characters path
@@ -192,6 +227,12 @@ class CharacterSelectMenu:
         return characters
 
     def scale_image(self, image_path, scale_factor):
+        """
+        Scale an image from a given path by a specified factor.
+        :param image_path: Path to the image file
+        :param scale_factor: The factor by which to scale the image
+        :return: A Pygame surface object of the scaled image
+        """
         # Load the image
         image = pygame.image.load(image_path)
         # Scale the image by the given factor
@@ -201,6 +242,10 @@ class CharacterSelectMenu:
         return scaled_image
 
     def run(self):
+        """
+        Run the main loop of the character selection menu, handling user interactions and updating the display.
+        :return: The name of the selected character, or None if no selection is made
+        """
         running = True
         while running:
             self.screen.blit(self.bg_image, (0, 0))
@@ -241,7 +286,10 @@ class CharacterSelectMenu:
 
 
 def play_random_music():
-
+    """
+    Continuously play random music tracks from a specified directory, handling track selection and looping.
+    :return: None
+    """
     # Fetch all .wav files from the specified directory
     music_files = [file for file in os.listdir(music_path) if file.endswith('.ogg')]
     if not music_files:
