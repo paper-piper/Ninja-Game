@@ -33,7 +33,6 @@ CHARACTER_STATS_FILE_PATH = r"../Characters.json"
 MAIN_MENU_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
 
 # Music paths
-MAIN_MENU_MUSIC_PATH = r'../Assets/Music/1 - Adventure Begin.ogg'
 
 # Font paths
 NORMAL_FONT_PATH = r'../Assets/font/NormalFont.ttf'

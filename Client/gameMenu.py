@@ -1,13 +1,16 @@
 import pygame
 import sys
 import os
+import random
+import threading
 
 pygame.init()
 
 MAIN_MENU_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
 
 # Music paths
-MAIN_MENU_MUSIC_PATH = r'../Assets/Music/1 - Adventure Begin.ogg'
+music_path = "../Assets/Music/Menu"
+stop_music = False
 
 # Font paths
 NORMAL_FONT_PATH = r'../Assets/font/NormalFont.ttf'
@@ -23,7 +26,8 @@ class Menu:
         self.font = FONT
         self.title_font = pygame.font.Font(NORMAL_FONT_PATH, 48)  # Larger font for the title
         self.bg_image = pygame.image.load(MAIN_MENU_IMAGE_PATH)
-        pygame.mixer.music.load(MAIN_MENU_MUSIC_PATH)
+        thread = threading.Thread(target=play_random_music)
+        thread.start()
         # pygame.mixer.music.play(-1)  # Play music indefinitely
         self.settings = {'sound': 'on', 'difficulty': 'easy'}
         self.character = "Shadow"  # defualt character
@@ -37,6 +41,7 @@ class Menu:
         self.update_menu_items()
 
     def run(self):
+        global stop_music
         running = True
         while running:
             self.screen.blit(self.bg_image, (0, 0))
@@ -66,6 +71,7 @@ class Menu:
                             if rect.collidepoint(event.pos):
                                 running = self.handle_selection(i)
         # pygame.mixer.music.stop()
+        stop_music = True
         return self.settings, self.character
 
     def get_items(self, menu_type):
@@ -118,7 +124,12 @@ class Menu:
                 if ':' in selection:
                     key, _ = selection.split(': ')
                     if key == 'Sound':
-                        self.settings['sound'] = 'off' if self.settings['sound'] == 'on' else 'on'
+                        if self.settings['sound'] == 'off':
+                            pygame.mixer.music.set_volume(1)
+                            self.settings['sound'] = 'on'
+                        else:
+                            pygame.mixer.music.set_volume(0)
+                            self.settings['sound'] = 'off'
                     elif key == 'Difficulty':
                         self.settings['difficulty'] = 'hard' if self.settings['difficulty'] == 'easy' else 'easy'
                     self.update_menu_items()  # Reflect changes in the menu items
@@ -217,6 +228,38 @@ class CharacterSelectMenu:
                                 return character['name']  # Return selected character name and exit
 
         return None
+
+
+def play_random_music():
+
+    # Fetch all .wav files from the specified directory
+    music_files = [file for file in os.listdir(music_path) if file.endswith('.ogg')]
+    if not music_files:
+        print("No music files found in the directory.")
+        return
+
+    # Function to play a selected music file
+    def play_music():
+        # Randomly select a music file
+        selected_file = random.choice(music_files)
+        full_path = os.path.join(music_path, selected_file)
+
+        # Load and play the selected music file
+        pygame.mixer.music.load(full_path)
+        pygame.mixer.music.play()
+        print(f"Now playing: {selected_file}")
+
+    # Play the first song
+    play_music()
+
+    # Continue playing music
+    while not stop_music:
+        # Check if music is still playing
+        if not pygame.mixer.music.get_busy():
+            # If the song has ended, play the next song
+            play_music()
+        pygame.time.wait(1000)  # Check every second
+    pygame.mixer.music.stop()
 
 
 if __name__ == "__main__":
