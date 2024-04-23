@@ -136,6 +136,8 @@ class Character:
         self.bullet_damage = bullet_damage
         self.bullet_lifespan = bullet_lifespan
         self.shooting_cooldown = shooting_cooldown
+        original_dead_image = pygame.image.load(f'../Assets/Characters/{name}/SeparateAnim/Dead.png').convert_alpha()
+        self.dead_image = pygame.transform.scale(original_dead_image, (32, 32))
         self.bullet_image = pygame.image.load(f'../Assets/Characters/{name}/Weapon.png').convert_alpha()
         self.sprites = self.load_sprites(name)
 
@@ -184,6 +186,7 @@ class Player:
         self.height = height
 
         # default qualities
+        self.dead = False
         self.last_shot_time = 0
         self.bullets = []  # Store bullets for each player
         self.rect = pygame.Rect(x, y, width, height)
@@ -193,6 +196,7 @@ class Player:
         self.anim_count = 0  # Counter to track animation speed
 
         # character qualities
+        self.dead_image = character.dead_image
         self.speed = character.speed
         self.max_hp = character.hp
         self.hp = character.hp
@@ -208,7 +212,10 @@ class Player:
         :param camera: the camera in which the player is drawn to
         :return:
         """
-        frame = self.sprites[self.direction][self.anim_frame]
+        if not self.dead:
+            frame = self.sprites[self.direction][self.anim_frame]
+        else:
+            frame = self.dead_image
         SCREEN.blit(frame, camera.apply(self))
 
     def move(self, direction):
@@ -289,6 +296,7 @@ class Player:
         self.hp -= damage
         if self.hp <= 0:
             # Handle player death here if needed
+            self.dead = True
             kill_sound.play()
             self.hp = 0
         else:
@@ -416,12 +424,21 @@ class Game:
         :return: None
         """
         try:
+            if self.player:
+                if self.player.dead:
+                    #self.game_over()
+                    return False   # the game is over and lost
+                elif all(player.dead for player in self.players.values() if player != self.player):
+                    #self.game_over()
+                    return False  # the game is over and won
+
             self.update_bullets()
             self.draw_game_objects()
             if self.player:
                 self.camera.follow_target(self.player)
                 self.draw_player_gui()
             pygame.display.flip()
+            return True  # the game continues
 
         except Exception as e:
             logger.error(f"Error updating game state: {e}")
@@ -439,7 +456,9 @@ class Game:
         scaled_heart_height = heart_height * scale_factor
 
         # Scale the image surface
-        hearts_surface = pygame.transform.scale(hearts_surface, (heart_width * 5 * scale_factor, heart_height * scale_factor))
+        hearts_surface = pygame.transform.scale(
+            hearts_surface,
+            (heart_width * 5 * scale_factor, heart_height * scale_factor))
 
         # Calculate number of hearts to display
         num_full_hearts = self.player.hp // 4
@@ -458,7 +477,11 @@ class Game:
 
         # Draw partial heart if any
         if partial_heart > 0:
-            partial_heart_rect = pygame.Rect((4 - partial_heart) * scaled_heart_width, 0, scaled_heart_width, scaled_heart_height)
+            partial_heart_rect = pygame.Rect(
+                (4 - partial_heart) * scaled_heart_width,
+                0,
+                scaled_heart_width, scaled_heart_height
+            )
             self.screen.blit(hearts_surface, (x, y), partial_heart_rect)
             x += scaled_heart_width
 
@@ -546,7 +569,7 @@ class Game:
     def check_bullet_hit(self, shooter_id, bullet):
         """
         Check if a bullet has hit any player other than the shooter.
-        :param shooter_id: The unique identifier of the player who shot the bullet
+        :param shooter_id: The unique identifier of the player who shot
         :param bullet: The bullet instance to check for collisions
         :return: Boolean indicating if a hit was detected (True if it was, False otherwise)
         """
@@ -573,10 +596,26 @@ class Game:
             map_offset_x = -self.camera.camera.x
             map_offset_y = -self.camera.camera.y
             self.screen.blit(map_image, (map_offset_x, map_offset_y))
+            # First, draw all dead players
             for player in self.players.values():
-                player.draw(self.camera)
-                for bullet in player.bullets:
-                    bullet.draw(self.camera)
+                if player.dead:  # Check if the player is dead
+                    player.draw(self.camera)
+                    for bullet in player.bullets:
+                        bullet.draw(self.camera)
+
+            # Second, draw all players who are not the main player and are not dead
+            for player in self.players.values():
+                if not player.dead and player != self.player:
+                    player.draw(self.camera)
+                    for bullet in player.bullets:
+                        bullet.draw(self.camera)
+
+            # Lastly, draw the main player, unless they are dead
+            if self.player:
+                if not self.player.dead:
+                    self.player.draw(self.camera)
+                    for bullet in self.player.bullets:
+                        bullet.draw(self.camera)
         except Exception as e:
             logger.error(f"Error drawing game objects: {e}")
 

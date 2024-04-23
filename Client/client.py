@@ -103,12 +103,11 @@ class GameClient:
         Receive and process the updated game state from the server.
         """
         try:
-            while self.running:
-                # TODO: validate the message json file
-                message, _ = self.client_socket.recvfrom(1024)
-                game_update = json.loads(message.decode())
-                self.action_queue.put(game_update)
-                # logger.info(f"Received action from server: {game_update}")
+            # TODO: validate the message json file
+            message, _ = self.client_socket.recvfrom(1024)
+            game_update = json.loads(message.decode())
+            self.action_queue.put(game_update)
+            # logger.info(f"Received action from server: {game_update}")
         except socket.error:
             # happens all the time, don't need to worry
             return
@@ -194,13 +193,18 @@ class GameClient:
                 self.send_move_action(x, y)
                 time.sleep(self.update_delay)
 
+    def get_server_updates(self):
+        while self.running:
+            self.receive_game_update()
+
     def start(self):
         """
         Initialize the game, connect to the server, and start the main game loop.
         """
         try:
+            # All the threads are dependent on the self.running variable
             # constantly get updates from server and push methods into the action queue
-            Thread(target=self.receive_game_update).start()
+            Thread(target=self.get_server_updates).start()
             self.send_character_init(self.character_name)
 
             # every 0.2 second send the player's x and y coordinate
@@ -212,7 +216,8 @@ class GameClient:
                 self.handle_key_events()
                 self.handle_movements()
 
-                self.game.update()
+                # if the game ended, stop all the threads
+                self.running = self.game.update()
                 pygame.time.Clock().tick(60)
         except Exception as e:
             logger.error(f"Error in main game loop: {e}")
