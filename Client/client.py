@@ -166,6 +166,7 @@ class GameClient:
                 player_id = action.get(PLAYER_ID)
 
                 if action_type == CREATE_PLAYER:
+                    logger.info(f"Got the player from server! {action_parameters[0], action_parameters[1], action_parameters[2]}")
                     self.game.create_player(player_id, *action_parameters)
 
                 elif action_type == MOVE_PLAYER and player_id != '0':

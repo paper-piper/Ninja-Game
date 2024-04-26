@@ -428,7 +428,8 @@ class Game:
                 if self.player.dead:
                     #self.game_over()
                     return False   # the game is over and lost
-                elif all(player.dead for player in self.players.values() if player != self.player):
+                elif (all(player.dead for player in self.players.values() if player != self.player)
+                      and len(self.players) > 1):
                     #self.game_over()
                     return False  # the game is over and won
 

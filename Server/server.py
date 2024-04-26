@@ -24,8 +24,9 @@ SERVER_PORT = 12345
 # Action types
 MOVE_PLAYER = 'move_player'
 SHOOT_PLAYER = 'shoot_player'
-CREATE_PLAYER = 'create_player'
 PLAYER_INIT = 'player_init'
+
+HIT_PLAYER = 'hit'
 
 # Action parameters
 ACTION_TYPE = 'type'
@@ -112,7 +113,7 @@ class CommandsServer:
                 dx, dy = action[ACTION_PARAMETERS]  # Unpacking the parameters
                 self.game.shoot_player(player_id, dx, dy)
 
-            if action_type == CREATE_PLAYER:
+            if action_type == PLAYER_INIT:
                 character_name = action[ACTION_PARAMETERS][0]
                 x, y = self.game.create_player(player_id, character_name)
                 self.broadcast_game_action(
