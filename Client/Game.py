@@ -30,10 +30,10 @@ SCREEN = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Tank Game")
 
 # Images paths
-MAP_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
-COLLISION_IMAGE_PATH = r'../Assets/Map/UpdatedCollision.png'
+MAP_IMAGE_PATH = r'../Assets/Map/map.png'
+COLLISION_IMAGE_PATH = r'../Assets/Map/player_collision.png'
 CHARACTER_STATS_FILE_PATH = r"../Characters.json"
-MAIN_MENU_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
+MAIN_MENU_IMAGE_PATH = r'../Assets/Map/old_map.png'
 
 # Music paths
 MUSIC_PATH = "../Assets/Music/Game"

@@ -6,7 +6,7 @@ import threading
 
 pygame.init()
 pygame.mixer.init()
-MAIN_MENU_IMAGE_PATH = r'../Assets/Map/detailedMap.png'
+MAIN_MENU_IMAGE_PATH = r'../Assets/Map/old_map.png'
 
 # Music paths
 music_path = "../Assets/Music/Menu"

@@ -14,8 +14,8 @@ SCREEN = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Tank Game")
 
 # Assets paths
-MAP_IMAGE_PATH = r'Assets/Map/detailedMap.png'
-collision_image_path = r'Assets/Map/UpdatedCollision.png'
+MAP_IMAGE_PATH = r'Assets/Map/old_map.png'
+collision_image_path = r'Assets/Map/old_map_collision.png'
 CHARACTER_STATS_FILE_PATH = "Characters.json"
 
 MAP_WIDTH = 0
