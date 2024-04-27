@@ -31,22 +31,24 @@ pygame.display.set_caption("Tank Game")
 
 # Images paths
 MAP_IMAGE_PATH = r'../Assets/Map/map.png'
-COLLISION_IMAGE_PATH = r'../Assets/Map/player_collision.png'
+PLAYER_COLLISION_MAP_PATH = r'../Assets/Map/player_collision.png'
+BULLET_COLLISION_MAP_PATH = r'../Assets/Map/bullet_collision.png'
 CHARACTER_STATS_FILE_PATH = r"../Characters.json"
 MAIN_MENU_IMAGE_PATH = r'../Assets/Map/old_map.png'
-
-# Music paths
-MUSIC_PATH = "../Assets/Music/Game"
-# Font paths
-NORMAL_FONT_PATH = r'../Assets/font/NormalFont.ttf'
-FONT = pygame.font.Font(NORMAL_FONT_PATH, 36)  # Set the font for the menu text
 
 MAP_WIDTH = 0
 MAP_HEIGHT = 0
 
 # Load images
 map_image = pygame.image.load(MAP_IMAGE_PATH).convert_alpha()
-collision_map = pygame.image.load(COLLISION_IMAGE_PATH).convert_alpha()
+player_collision_map = pygame.image.load(PLAYER_COLLISION_MAP_PATH).convert_alpha()
+bullet_collision_map = pygame.image.load(BULLET_COLLISION_MAP_PATH).convert_alpha()
+
+# Music paths
+MUSIC_PATH = "../Assets/Music/Game"
+# Font paths
+NORMAL_FONT_PATH = r'../Assets/font/NormalFont.ttf'
+FONT = pygame.font.Font(NORMAL_FONT_PATH, 36)  # Set the font for the menu text
 
 # player qualities
 CHARACTER_WIDTH = 32
@@ -249,7 +251,7 @@ class Player:
             self.anim_count = 0  # Reset counter when player stops
 
         # Check collision before actual move
-        if check_collision(self.x + dx, self.y + dy, self.width, self.height):
+        if check_collision(self.x + dx, self.y + dy, self.width, self.height, True):
             self.x += dx
             self.y += dy
 
@@ -367,7 +369,7 @@ class Bullet:
         if self.lifespan <= 0:
             return True  # Signal to remove this bullet
         did_collide = False
-        if check_collision(int(self.x + self.dx), int(self.y + self.dy), int(self.radius), int(self.radius)):
+        if check_collision(int(self.x + self.dx), int(self.y + self.dy), int(self.radius), int(self.radius), False):
             self.x += self.dx
             self.y += self.dy
         else:
@@ -735,25 +737,26 @@ def get_image_dimensions(image_path):
     return width, height
 
 
-def check_collision(x, y, width, height):
+def check_collision(x, y, width, height, is_player):
     """
 
     :param x:
     :param y:
     :param width:
     :param height:
+    :param is_player: if is player, use player collision else bullet collision
     :return: bool, true if you can move, false if not
     """
     try:
         # Loop through the edges of the rectangle
         for i in range(x, x + width):
             for j in [y, y + height - 1]:  # Check top and bottom borders
-                if is_colliding_at(i, j):
+                if is_colliding_at(i, j, is_player):
                     return False
 
         for i in [x, x + width - 1]:
             for j in range(y, y + height):  # Check left and right borders
-                if is_colliding_at(i, j):
+                if is_colliding_at(i, j, is_player):
                     return False
 
         return True
@@ -761,15 +764,19 @@ def check_collision(x, y, width, height):
         return False
 
 
-def is_colliding_at(x, y):
+def is_colliding_at(x, y, is_player):
     """
     checking if some pixel is colliding with a map object
     :param x: the pixel's x
     :param y: the pixel's y
+    :param is_player: if is player, use player collision else bullet collision
     :return:
     """
     int_x = int(x)
     int_y = int(y)
-    pixel_color = collision_map.get_at((int_x, int_y))
+    if is_player:
+        pixel_color = player_collision_map.get_at((int_x, int_y))
+    else:
+        pixel_color = bullet_collision_map.get_at((int_x, int_y))
     alpha = pixel_color[3]
     return not alpha == 0

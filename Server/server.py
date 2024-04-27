@@ -115,6 +115,7 @@ class CommandsServer:
             if action_type == PLAYER_INIT:
                 character_name = action[ACTION_PARAMETERS][0]
                 x, y = self.game.create_player(player_id, character_name)
+                logger.info(f"Created player named {character_name} in: {x},{y}")
                 self.broadcast_game_action(
                     player_id,
                     {ACTION_TYPE: action_type, ACTION_PARAMETERS: [character_name, x, y]}

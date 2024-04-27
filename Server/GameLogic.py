@@ -26,14 +26,16 @@ pygame.display.set_caption("Tank Game")
 
 # Assets paths
 MAP_IMAGE_PATH = r'../Assets/Map/map.png'
-collision_image_path = r'../Assets/Map/player_collision.png'
+PLAYER_COLLISION_MAP_PATH = r'../Assets/Map/player_collision.png'
+BULLET_COLLISION_MAP_PATH = r'../Assets/Map/bullet_collision.png'
 CHARACTER_STATS_FILE_PATH = "../Characters.json"
 
 MAP_WIDTH = 0
 MAP_HEIGHT = 0
 # Load images
 # map_image = pygame.image.load(MAP_IMAGE_PATH).convert_alpha()
-collision_map = Image.open('../Assets/Map/old_map_collision.png')
+player_collision_map = Image.open(PLAYER_COLLISION_MAP_PATH)
+bullet_collision_map = Image.open(BULLET_COLLISION_MAP_PATH)
 
 # player qualities
 player_speed = 4
@@ -143,7 +145,7 @@ class Player:
             self.anim_count = 0  # Reset counter when player stops
 
         # Check collision before actual move
-        if check_collision(self.x + dx, self.y + dy, self.width, self.height):
+        if check_collision(self.x + dx, self.y + dy, self.width, self.height, True):
             self.x += dx
             self.y += dy
 
@@ -203,7 +205,7 @@ class Bullet:
         if self.lifespan <= 0:
             return True  # Signal to remove this bullet
         did_collide = False
-        if check_collision(int(self.x + self.dx), int(self.y + self.dy), int(self.radius), int(self.radius)):
+        if check_collision(int(self.x + self.dx), int(self.y + self.dy), int(self.radius), int(self.radius), False):
             self.x += self.dx
             self.y += self.dy
         else:
@@ -259,11 +261,11 @@ class Game:
             x = random.randint(0, MAP_WIDTH - character_width)
             y = random.randint(0, MAP_HEIGHT - character_height)
 
-            if check_collision(x, y, character_width, character_height):
+            if check_collision(x, y, character_width, character_height, True):
                 return x, y  # Found a free spot
 
-        # If no free spot is found after max_attempts, return None or raise an error
-        return 20, 30
+        # If no free spot is found after max_attempts
+        return 100, 50
 
     def delete_player(self, player_id):
         if player_id in self.players:
@@ -333,25 +335,26 @@ def get_image_dimensions(image_path):
     return width, height
 
 
-def check_collision(x, y, width, height):
+def check_collision(x, y, width, height, is_player):
     """
 
     :param x:
     :param y:
     :param width:
     :param height:
+    :param is_player: if is player, use player collision else bullet collision
     :return: bool, true if you can move, false if not
     """
     try:
         # Loop through the edges of the rectangle
         for i in range(x, x + width):
             for j in [y, y + height - 1]:  # Check top and bottom borders
-                if is_colliding_at(i, j):
+                if is_colliding_at(i, j, is_player):
                     return False
 
         for i in [x, x + width - 1]:
             for j in range(y, y + height):  # Check left and right borders
-                if is_colliding_at(i, j):
+                if is_colliding_at(i, j, is_player):
                     return False
 
         return True
@@ -359,13 +362,22 @@ def check_collision(x, y, width, height):
         return False
 
 
-def is_colliding_at(x, y):
+def is_colliding_at(x, y, is_player):
+    """
+    checking if some pixel is colliding with a map object
+    :param x: the pixel's x
+    :param y: the pixel's y
+    :param is_player: if is player, use player collision else bullet collision
+    :return:
+    """
     try:
         int_x = int(x)
         int_y = int(y)
-        pixel_color = collision_map.getpixel((int_x, int_y))
-        # Assuming the image has an alpha channel, the alpha value will be the 4th element
-        alpha = pixel_color[3] if len(pixel_color) == 4 else 255  # Assuming opaque if no alpha channel
+        if is_player:
+            pixel_color = player_collision_map.getpixel((int_x, int_y))
+        else:
+            pixel_color = bullet_collision_map.getpixel((int_x, int_y))
+        alpha = pixel_color[3]
         return not alpha == 0
     except Exception as e:
         return True
