@@ -22,8 +22,8 @@ SERVER_IP = '127.0.0.1'
 SERVER_PORT = 12345
 
 # Action types
-MOVE_PLAYER = 'move_player'
-SHOOT_PLAYER = 'shoot_player'
+MOVE_PLAYER = 'move'
+SHOOT_PLAYER = 'shoot'
 PLAYER_INIT = 'player_init'
 
 HIT_PLAYER = 'hit'

@@ -58,6 +58,7 @@ heart_width = 16
 heart_height = 13
 
 # Load music and sounds effects
+UPDATE_MUSIC_DELAY = 1000  # in milliseconds, a second
 pygame.mixer.init()
 hit_sound_path = r"../Assets/SoundEffects/Game/Hit.wav"
 kill_sound_path = r"../Assets/SoundEffects/Game/Kill.wav"
@@ -424,6 +425,7 @@ class Game:
         :return: None
         """
         try:
+            """
             if self.player:
                 if self.player.dead:
                     #self.game_over()
@@ -432,7 +434,7 @@ class Game:
                       and len(self.players) > 1):
                     #self.game_over()
                     return False  # the game is over and won
-
+            """
             self.update_bullets()
             self.draw_game_objects()
             if self.player:
@@ -673,7 +675,7 @@ class Game:
             if not pygame.mixer.music.get_busy():
                 # If the song has ended, play the next song
                 play_music()
-            pygame.time.wait(5000)  # Check every five seconds
+            pygame.time.wait(UPDATE_MUSIC_DELAY)  # Check every second
         pygame.mixer.music.stop()
 
 

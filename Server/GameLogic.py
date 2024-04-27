@@ -230,9 +230,7 @@ class Game:
         return bullet_hits
 
     def create_player(self, player_id, character_name):
-        # TODO: fix this
-        # x, y = self.find_random_free_position(CHARACTER_WIDTH, CHARACTER_HEIGHT)
-        x, y = 20, 30
+        x, y = self.find_random_free_position(CHARACTER_WIDTH, CHARACTER_HEIGHT)
         if not x:
             logger.error("Didn't found any x,y for the player to be created")
         character = load_character_from_json(CHARACTER_STATS_FILE_PATH, character_name)
@@ -245,6 +243,7 @@ class Game:
         )
         self.players[player_id] = player
         # logger.info(f"Created new player ({character_name}) in x = {x}, y = {y}")
+        # return 20, 30
         return x, y
 
     def find_random_free_position(self, character_width, character_height):

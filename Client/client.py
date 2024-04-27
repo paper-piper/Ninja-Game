@@ -218,7 +218,8 @@ class GameClient:
                 self.handle_movements()
 
                 # if the game ended, stop all the threads
-                self.running = self.game.update()
+                # self.running = self.game.update()
+                self.game.update()
                 pygame.time.Clock().tick(60)
         except Exception as e:
             logger.error(f"Error in main game loop: {e}")
