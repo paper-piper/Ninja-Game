@@ -427,23 +427,22 @@ class Game:
         :return: None
         """
         try:
-            """
             if self.player:
                 if self.player.dead:
                     #self.game_over()
-                    return False   # the game is over and lost
+                    return True   # the game is over and lost
                 elif (all(player.dead for player in self.players.values() if player != self.player)
                       and len(self.players) > 1):
                     #self.game_over()
-                    return False  # the game is over and won
-            """
+                    return True  # the game is over and won
+
             self.update_bullets()
             self.draw_game_objects()
             if self.player:
                 self.camera.follow_target(self.player)
                 self.draw_player_gui()
             pygame.display.flip()
-            return True  # the game continues
+            return False  # the game continues
 
         except Exception as e:
             logger.error(f"Error updating game state: {e}")

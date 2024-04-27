@@ -217,7 +217,10 @@ class GameClient:
                 self.handle_movements()
 
                 # if the game ended, stop all the threads
-                # self.running = self.game.update()
+                is_over = self.game.update()
+                if is_over:
+                    pygame.time.Clock().tick(1000)
+                    return
                 self.game.update()
                 pygame.time.Clock().tick(60)
         except Exception as e:
@@ -226,10 +229,10 @@ class GameClient:
 
 if __name__ == "__main__":
     pygame.init()
-    menu = gameMenu.Menu()
-    settings, character = menu.run()
-    print(settings)  # Print settings to verify
 
-    client = GameClient(character, UPDATE_DELAY, True if settings['sound'] == 'on' else False)
-    client.start()
+    while True:
+        menu = gameMenu.Menu()
+        settings, character = menu.run()
+        client = GameClient(character, UPDATE_DELAY, True if settings['sound'] == 'on' else False)
+        client.start()
 
