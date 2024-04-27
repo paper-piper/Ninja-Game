@@ -1,4 +1,3 @@
-import random
 import socket
 import json
 import time
@@ -21,10 +20,10 @@ SERVER_IP = '127.0.0.1'
 SERVER_PORT = 12345
 
 # Client actions
-MOVE_PLAYER = "move"
-SHOOT_PLAYER = "shot"
-CREATE_PLAYER = "player_init"
-HIT_PLAYER = "hit"
+MOVE_PLAYER = 'move'
+SHOOT_PLAYER = 'shoot'
+PLAYER_INIT = 'player_init'
+HIT_PLAYER = 'hit'
 
 
 # Server response keys
@@ -59,7 +58,7 @@ class GameClient:
         Send the initial character choice to the server.
         :param character_name: The name of the character chosen by the user
         """
-        message = {'type': CREATE_PLAYER, 'action_parameters': [character_name]}
+        message = {'type': PLAYER_INIT, 'action_parameters': [character_name]}
         self.send_message(message)
 
     def send_move_action(self, x, y) -> None:
@@ -165,7 +164,7 @@ class GameClient:
                 action_parameters = action.get(ACTION_PARAMETERS, [])
                 player_id = action.get(PLAYER_ID)
 
-                if action_type == CREATE_PLAYER:
+                if action_type == PLAYER_INIT:
                     logger.info(f"Got the player from server! {action_parameters[0], action_parameters[1], action_parameters[2]}")
                     self.game.create_player(player_id, *action_parameters)
 

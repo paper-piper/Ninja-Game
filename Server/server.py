@@ -25,7 +25,6 @@ SERVER_PORT = 12345
 MOVE_PLAYER = 'move'
 SHOOT_PLAYER = 'shoot'
 PLAYER_INIT = 'player_init'
-
 HIT_PLAYER = 'hit'
 
 # Action parameters
