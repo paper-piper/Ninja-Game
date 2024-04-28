@@ -2,7 +2,7 @@ import socket
 import json
 import time
 import pygame
-import gameMenu
+import GameMenu
 import Game
 from threading import Thread
 import logging
@@ -219,9 +219,8 @@ class GameClient:
                 # if the game ended, stop all the threads
                 is_over = self.game.update()
                 if is_over:
-                    pygame.time.Clock().tick(1000)
+                    time.sleep(5)
                     return
-                self.game.update()
                 pygame.time.Clock().tick(60)
         except Exception as e:
             logger.error(f"Error in main game loop: {e}")
@@ -231,7 +230,7 @@ if __name__ == "__main__":
     pygame.init()
 
     while True:
-        menu = gameMenu.Menu()
+        menu = GameMenu.Menu()
         settings, character = menu.run()
         client = GameClient(character, UPDATE_DELAY, True if settings['sound'] == 'on' else False)
         client.start()

@@ -1,10 +1,11 @@
 import socket
 import json
 import pygame
-from threading import Thread
+from threading import Thread, Timer
 from queue import Queue
 import GameLogic
 import logging
+import time
 
 # Initialize logger
 logging.basicConfig(
@@ -20,6 +21,7 @@ logger = logging.getLogger("server")
 
 SERVER_IP = '127.0.0.1'
 SERVER_PORT = 12345
+DISCONNECT_TIMEOUT = 2  # seconds
 
 # Action types
 MOVE_PLAYER = 'move'
@@ -42,6 +44,7 @@ class CommandsServer:
         self.game = GameLogic.Game()
         self.action_queue = Queue()
         self.clients = {}
+        self.last_active = {}  # Stores last activity time for each client
         self.id_counter = 1   # starts from 1, since id zero is saved for acknowledge messages
 
     def start_server(self):
@@ -53,16 +56,31 @@ class CommandsServer:
         # start listening
         logger.info(f"Server started, listening on {SERVER_IP}:{SERVER_PORT}")
         self.server_socket.bind((SERVER_IP, SERVER_PORT))
+        self.check_for_timeouts()  # Start the timeout check loop
 
         while True:
-            # handle client inputs
             message, client_address = self.server_socket.recvfrom(1024)
             client_id = next((k for k, v in self.clients.items() if v == client_address), None)
             if not client_id:
                 client_id = self.id_counter
-                self.clients[self.id_counter] = client_address  # Register client address
+                self.clients[self.id_counter] = client_address
                 self.id_counter += 1
+
+            self.last_active[client_id] = time.time()  # Update last active time
             self.action_queue.put((client_id, json.loads(message.decode())))
+
+    def check_for_timeouts(self):
+        current_time = time.time()
+        to_remove = []
+        for client_id, last_time in self.last_active.items():
+            if current_time - last_time > DISCONNECT_TIMEOUT:
+                to_remove.append(client_id)
+
+        for client_id in to_remove:
+            self.cleanup_client(client_id)
+            logger.info(f"Client {client_id} has been disconnected due to inactivity.")
+
+        Timer(1, self.check_for_timeouts).start()  # Schedule next check in 1 second
 
     def run_game_loop(self):
         """
@@ -100,9 +118,6 @@ class CommandsServer:
         :param player_id: the unique ID of the player who initiated the action
         :param action: the data received
         """
-        # TODO: use gpt to split this function into multiple functions, the chat link:
-        # https://chat.openai.com/share/129f1fc2-062d-4025-9f6c-b3847a4d6784
-
         try:
             action_type = action[ACTION_TYPE]
             if action_type == MOVE_PLAYER:
@@ -113,22 +128,7 @@ class CommandsServer:
                 self.game.shoot_player(player_id, dx, dy)
 
             if action_type == PLAYER_INIT:
-                character_name = action[ACTION_PARAMETERS][0]
-                x, y = self.game.create_player(player_id, character_name)
-                logger.info(f"Created player named {character_name} in: {x},{y}")
-                self.broadcast_game_action(
-                    player_id,
-                    {ACTION_TYPE: action_type, ACTION_PARAMETERS: [character_name, x, y]}
-                )
-                # After sending the client his own character, send all other clients
-                for other_client_id, other_client_socket in self.clients.items():
-                    if other_client_id != player_id:
-                        player = self.game.get_player(other_client_id)
-                        action = {ACTION_TYPE: PLAYER_INIT,
-                                  ACTION_PARAMETERS: [player.name, player.x, player.y],
-                                  'player_id': other_client_id
-                                  }
-                        self.send_message(self.clients[player_id], action)
+                self.handle_player_init(action, action_type, player_id)
             else:
                 # Broadcast the action to all clients
                 self.broadcast_game_action(
@@ -139,17 +139,42 @@ class CommandsServer:
         except Exception as e:
             logger.error(f"caught expedition: {e}")
 
+    def handle_player_init(self, action, action_type,player_id):
+        """
+        send the client his own character, and all the other client
+        :param action:
+        :param action_type:
+        :param player_id:
+        :return:
+        """
+        character_name = action[ACTION_PARAMETERS][0]
+        x, y = self.game.create_player(player_id, character_name)
+        logger.info(f"Created player named {character_name} in: {x},{y}")
+        self.broadcast_game_action(
+            player_id,
+            {ACTION_TYPE: action_type, ACTION_PARAMETERS: [character_name, x, y]}
+        )
+        # After sending the client his own character, send all other clients
+        for other_client_id, other_client_socket in self.clients.items():
+            if other_client_id != player_id:
+                player = self.game.get_player(other_client_id)
+                action = {ACTION_TYPE: PLAYER_INIT,
+                          ACTION_PARAMETERS: [player.name, player.x, player.y],
+                          'player_id': other_client_id
+                          }
+                self.send_message(self.clients[player_id], action)
+
     def cleanup_client(self, player_id):
         """
         Clean up a client's data from the server, typically called when a client disconnects or
         sends a 'close' message.
         :param player_id: the unique ID of the client to clean up
         """
-        # TODO: integrate this function when client sends 'close' message or isn't active for some time
         if player_id in self.clients:
-            self.clients[player_id].close()
             del self.clients[player_id]
+            del self.last_active[player_id]
             self.game.delete_player(player_id)
+            logger.info(f"Cleaned up data for disconnected client {player_id}.")
 
     def broadcast_game_action(self, player_id, action):
         """
