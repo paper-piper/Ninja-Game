@@ -223,5 +223,4 @@ class CommandsServer:
 
 if __name__ == "__main__":
     cmd_server = CommandsServer()
-    Thread(target=cmd_server.run_game_loop).start()
     cmd_server.start_server()
