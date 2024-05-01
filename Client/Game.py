@@ -6,6 +6,7 @@ import logging
 import os
 import random
 import threading
+import time
 
 # Initialize pygame
 pygame.init()
@@ -34,18 +35,24 @@ MAP_IMAGE_PATH = r'../Assets/Map/map.png'
 PLAYER_COLLISION_MAP_PATH = r'../Assets/Map/player_collision.png'
 BULLET_COLLISION_MAP_PATH = r'../Assets/Map/bullet_collision.png'
 CHARACTER_STATS_FILE_PATH = r"../Characters.json"
-MAIN_MENU_IMAGE_PATH = r'../Assets/Map/old_map.png'
-
+MAIN_MENU_IMAGE_PATH = r'../Assets/Map/map.png'
+WINNING_IMAGE_PATH = r'../Assets/GUI/WinTextImage.png'
+LOSING_IMAGE_PATH = r'../Assets/GUI/LostTextImage.png'
 MAP_WIDTH = 0
 MAP_HEIGHT = 0
 
 # Load images
 map_image = pygame.image.load(MAP_IMAGE_PATH).convert_alpha()
+winning_image = pygame.image.load(WINNING_IMAGE_PATH).convert_alpha()
+losing_image = pygame.image.load(LOSING_IMAGE_PATH).convert_alpha()
+
 player_collision_map = pygame.image.load(PLAYER_COLLISION_MAP_PATH).convert_alpha()
 bullet_collision_map = pygame.image.load(BULLET_COLLISION_MAP_PATH).convert_alpha()
 
 # Music paths
 MUSIC_PATH = "../Assets/Music/Game"
+winning_theme_path = "../Assets/Music/Winning_Theme.ogg"
+losing_theme_path = "../Assets/Music/Losing_Theme.ogg"
 # Font paths
 NORMAL_FONT_PATH = r'../Assets/font/NormalFont.ttf'
 FONT = pygame.font.Font(NORMAL_FONT_PATH, 36)  # Set the font for the menu text
@@ -414,6 +421,7 @@ class Game:
             self.camera = Camera(self.map_width, self.map_height)
             self.players = {}
             self.stop_music = False
+            self.game_over_music_playing = False
             thread = threading.Thread(target=self.play_random_music)
             thread.start()
             self.player = None
@@ -421,26 +429,61 @@ class Game:
         except Exception as e:
             logger.error(f"Game initialization error: {e}")
 
+    def game_over(self, win):
+        """
+        Display the game over screen based on the game result.
+        """
+        # Indicate that game over music is playing
+        self.game_over_music_playing = True
+
+        # Play game over music
+        if win:
+            pygame.mixer.music.load(winning_theme_path)
+        else:
+            pygame.mixer.music.load(losing_theme_path)
+        pygame.mixer.music.play()
+        # Select the appropriate image based on the win parameter
+        image = winning_image if win else losing_image
+
+        # Position the image at the top center of the screen
+        # Assuming the screen's size is 800x600 as mentioned
+        screen_center_x = self.screen.get_rect().centerx
+        image_width = image.get_width()
+
+        # Calculate the position to center the image on the screen
+        image_position = (screen_center_x - image_width // 2, 20)
+
+        # Blit the image onto the screen at the calculated position
+        self.screen.blit(image, image_position)
+        pygame.display.flip()
+        # Wait for the music to finish before continuing with random music
+        time.sleep(4)
+        pygame.mixer.music.stop()
+
+        # Indicate that game over music has finished
+        self.game_over_music_playing = False
+
     def update(self):
         """
         Update the game state by moving bullets, drawing game objects, and managing UI updates.
         :return: None
         """
         try:
-            if self.player:
-                if self.player.dead:
-                    #self.game_over()
-                    return True   # the game is over and lost
-                elif (all(player.dead for player in self.players.values() if player != self.player)
-                      and len(self.players) > 1):
-                    #self.game_over()
-                    return True  # the game is over and won
-
             self.update_bullets()
             self.draw_game_objects()
             if self.player:
                 self.camera.follow_target(self.player)
                 self.draw_player_gui()
+            # check for game over
+            if self.player:
+                if self.player.dead:
+                    self.game_over(False)
+                    return True   # the game is over and lost
+                elif (all(player.dead for player in self.players.values() if player != self.player)
+                      and len(self.players) > 1):
+                    self.game_over(True)
+                    return True  # the game is over and won
+
             pygame.display.flip()
             return False  # the game continues
 
@@ -668,30 +711,14 @@ class Game:
             # Load and play the selected music file
             pygame.mixer.music.load(full_path)
             pygame.mixer.music.play()
-            print(f"Now playing: {selected_file}")
 
         # Continue playing music
         while not self.stop_music:
-            # Check if music is still playing
-            if not pygame.mixer.music.get_busy():
-                # If the song has ended, play the next song
-                play_music()
-            pygame.time.wait(UPDATE_MUSIC_DELAY)  # Check every second
+            if not self.game_over_music_playing:  # Only play random music if not in game over state
+                if not pygame.mixer.music.get_busy():
+                    play_music()
+            pygame.time.wait(UPDATE_MUSIC_DELAY)
         pygame.mixer.music.stop()
-
-
-def display_end_screen(result):
-    font = pygame.font.SysFont("Arial", 48)
-    if result == "Win":
-        message = "You Win!"
-    else:
-        message = "You Lose!"
-    text = font.render(message, True, (0, 0, 0))
-    SCREEN.fill((255, 255, 255))
-    SCREEN.blit(text, (screen_width // 2 - text.get_width() // 2, screen_height // 2 - text.get_height() // 2))
-    pygame.display.flip()
-    pygame.time.wait(300)  # Wait 3 seconds before closing or restarting the game
-
 
 def load_character_from_json(name):
     """

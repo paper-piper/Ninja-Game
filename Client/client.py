@@ -219,7 +219,6 @@ class GameClient:
                 # if the game ended, stop all the threads
                 is_over = self.game.update()
                 if is_over:
-                    time.sleep(5)
                     return
                 pygame.time.Clock().tick(60)
         except Exception as e:
