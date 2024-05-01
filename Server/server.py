@@ -19,7 +19,7 @@ logger = logging.getLogger("server")
 
 # --------------------------------------- Constants -------------------------------------------------
 
-SERVER_IP = '127.0.0.1'
+SERVER_IP = '0.0.0.0'
 SERVER_PORT = 12345
 DISCONNECT_TIMEOUT = 2  # seconds
 
@@ -59,7 +59,10 @@ class CommandsServer:
         self.check_for_timeouts()  # Start the timeout check loop
 
         while True:
+            print("halolo")
             message, client_address = self.server_socket.recvfrom(1024)
+            logger.info(f"Received something! {message}")
+            print("Hi")
             client_id = next((k for k, v in self.clients.items() if v == client_address), None)
             if not client_id:
                 client_id = self.id_counter
