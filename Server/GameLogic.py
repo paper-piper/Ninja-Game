@@ -224,12 +224,7 @@ class Game:
         # self.screen = screen
         self.map_width, self.map_height = get_image_dimensions(MAP_IMAGE_PATH)
         self.camera = Camera(self.map_width, self.map_height)
-        self.players = {}
-
-    def update(self):
-        # This method will be called by the server to update the game state
-        bullet_hits = self.update_bullets()
-        return bullet_hits
+        self.players: dict[str,Player] = {}
 
     def create_player(self, player_id, character_name):
         x, y = self.find_random_free_position(CHARACTER_WIDTH, CHARACTER_HEIGHT)
@@ -280,6 +275,12 @@ class Game:
             self.players[player_id].shoot(dx, dy)
 
     def update_bullets(self):
+        """
+        move the bullets and return bullet hits and death
+        :return: dead_players: a list of all dead players
+        :return: bullet_hits: a list of all bullet hits
+        """
+        dead_players = []
         bullet_hits = []
         for player_id, player in self.players.items():
             for bullet in player.bullets[:]:
@@ -293,13 +294,21 @@ class Game:
                     player.bullets.remove(bullet)
                     logger.info(f"Detected player hit! on player id {hit_player_id}")
                     bullet_hits.append((hit_player_id, bullet.damage))
+                    if self.players[hit_player_id].hp <= 0:
+                        dead_players.append(hit_player_id)
 
-        return bullet_hits
+        return dead_players, bullet_hits
 
     def within_bounds(self, bullet):
         return 0 <= bullet.x <= self.map_width and 0 <= bullet.y <= self.map_height
 
     def check_bullet_hit(self, shooter_id, bullet):
+        """
+        check bullet hit and decrement health if so
+        :param shooter_id:
+        :param bullet:
+        :return:
+        """
         for player_id, player in self.players.items():
             if player_id != shooter_id and player.rect.collidepoint(bullet.x, bullet.y):
                 player.take_damage(bullet.damage)

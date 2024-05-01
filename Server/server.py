@@ -12,7 +12,7 @@ logging.basicConfig(
     filename='server.log',
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s - Line: %(lineno)d',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    datefmt='%d %H:%M:%S'
 )
 logger = logging.getLogger("server")
 
@@ -92,9 +92,11 @@ class CommandsServer:
                 player_id, action = self.action_queue.get()
                 self.process_action(player_id, action)
 
-            bullet_hits = self.game.update()
+            dead_players, bullet_hits = self.game.update_bullets()
             for bullet_hit in bullet_hits:
                 self.handle_hit(bullet_hit)
+            for dead_player in dead_players:
+                logger.info(f"A player has died! {dead_player}")
             pygame.time.Clock().tick(60)
 
     def handle_hit(self, bullet_hit):
@@ -139,7 +141,7 @@ class CommandsServer:
         except Exception as e:
             logger.error(f"caught expedition: {e}")
 
-    def handle_player_init(self, action, action_type,player_id):
+    def handle_player_init(self, action, action_type, player_id):
         """
         send the client his own character, and all the other client
         :param action:
@@ -197,28 +199,6 @@ class CommandsServer:
         """
         message_json = json.dumps(message)
         self.server_socket.sendto(message_json.encode(), client_address)
-
-    def receive_message(self, client_socket):
-        """
-        Receive a complete message from a client socket, ensuring all parts of the message
-        are properly received and decoded.
-        :param client_socket: the client socket from which the message is received
-        :return: the fully received and decoded message or None if the connection is lost
-        """
-        header = client_socket.recv(4)
-        if not header:
-            return None
-
-        message_length = int.from_bytes(header, byteorder='big')
-        message_data = bytearray()
-
-        while len(message_data) < message_length:
-            next_byte = client_socket.recv(1)
-            if not next_byte:
-                raise Exception("Connection lost while receiving the message")
-            message_data.extend(next_byte)
-
-        return json.loads(message_data.decode())
 
 
 if __name__ == "__main__":

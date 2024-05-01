@@ -6,7 +6,7 @@ import threading
 
 pygame.init()
 pygame.mixer.init()
-MAIN_MENU_IMAGE_PATH = r'../Assets/Map/old_map.png'
+MAIN_MENU_IMAGE_PATH = r'../Assets/Map/MainMenuBg.png'
 
 # Music paths
 music_path = "../Assets/Music/Menu"
@@ -141,12 +141,14 @@ class Menu:
                 self.character = character_select.run()
                 return False  # Exit menu when starting the game
             elif selection == 'Settings':
+                accept2_sound.play()
                 self.current_menu = 'Settings'  # Switch to settings menu
                 self.update_menu_items()
             elif selection == 'Exit':
                 pygame.quit()
                 sys.exit()
         elif self.current_menu == 'Settings':
+            accept2_sound.play()
             selection = self.items[index]
             if selection == 'Back to Main Menu':
                 self.current_menu = 'Main Menu'  # Switch back to main menu
