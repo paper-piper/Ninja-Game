@@ -1,22 +1,94 @@
 {
     "characters": [
         {
-            "name": "DarkNinja",
-            "hp": 120,
-            "speed": 3,
-            "bullet_speed": 40,
-            "bullet_damage": 40,
+            "name": "Master",
+            "hp": 10,
+            "speed": 4,
+            "bullet_speed": 8,
+            "bullet_damage": 1,
+            "bullet_lifespan": 210,
+            "shooting_cooldown": 120
+        },
+        {
+            "name": "Shadow",
+            "hp": 8,
+            "speed": 4,
+            "bullet_speed": 13,
+            "bullet_damage": 1,
             "bullet_lifespan": 200,
-            "shooting_cooldown": 200
+            "shooting_cooldown": 350
         },
         {
             "name": "Eskimo",
-            "hp": 100,
-            "speed": 2,
-            "bullet_speed": 20,
-            "bullet_damage": 10,
+            "hp": 14,
+            "speed": 3,
+            "bullet_speed": 10,
+            "bullet_damage": 3,
             "bullet_lifespan": 180,
-            "shooting_cooldown": 45
+            "shooting_cooldown": 500
+        },
+        {
+            "name": "Radiant",
+            "hp": 16,
+            "speed": 3,
+            "bullet_speed": 11,
+            "bullet_damage": 4,
+            "bullet_lifespan": 220,
+            "shooting_cooldown": 600
+        },
+        {
+            "name": "Knight",
+            "hp": 18,
+            "speed": 2,
+            "bullet_speed": 10,
+            "bullet_damage": 5,
+            "bullet_lifespan": 190,
+            "shooting_cooldown": 600
+        },
+        {
+            "name": "Frog",
+            "hp": 12,
+            "speed": 3,
+            "bullet_speed": 12,
+            "bullet_damage": 2,
+            "bullet_lifespan": 150,
+            "shooting_cooldown": 60
+        },
+        {
+            "name": "Noble",
+            "hp": 10,
+            "speed": 2,
+            "bullet_speed": 15,
+            "bullet_damage": 3,
+            "bullet_lifespan": 170,
+            "shooting_cooldown": 300
+        },
+        {
+            "name": "Princess",
+            "hp": 10,
+            "speed": 3,
+            "bullet_speed": 15,
+            "bullet_damage": 3,
+            "bullet_lifespan": 160,
+            "shooting_cooldown": 200
+        },
+        {
+            "name": "Samurai",
+            "hp": 16,
+            "speed": 3,
+            "bullet_speed": 20,
+            "bullet_damage": 1,
+            "bullet_lifespan": 205,
+            "shooting_cooldown": 140
+        },
+        {
+            "name": "Villager",
+            "hp": 16,
+            "speed": 3,
+            "bullet_speed": 18,
+            "bullet_damage": 1,
+            "bullet_lifespan": 175,
+            "shooting_cooldown": 50
         }
     ]
 }
