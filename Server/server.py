@@ -22,6 +22,7 @@ logger = logging.getLogger("server")
 SERVER_IP = '0.0.0.0'
 SERVER_PORT = 12345
 DISCONNECT_TIMEOUT = 10  # seconds
+GAME_CHECKING_DELAY = 1
 
 # Action types
 MOVE_PLAYER = 'move'
@@ -47,18 +48,40 @@ class CommandsServer:
         self.last_active = {}  # Stores last activity time for each client
         self.id_counter = 1   # starts from 1, since id zero is saved for acknowledge messages
         self.running = True  # to manage all the threads
+        self.threads = []
 
     def start_server(self):
         """
         Start the server by initiating the game loop in a separate thread and binding
         the server socket to listen for incoming client messages.
         """
-        Thread(target=self.run_game_loop).start()
-        # start listening
         logger.info(f"Server started, listening on {SERVER_IP}:{SERVER_PORT}")
         self.server_socket.bind((SERVER_IP, SERVER_PORT))
-        self.check_for_timeouts()  # Start the timeout check loop
 
+        # start all the different threads
+        game_loop_thread = Thread(target=self.run_game_loop)
+        self.threads.append(game_loop_thread)
+        game_loop_thread.start()
+
+        client_messages_thread = Thread(target=self.handle_client_messages)
+        self.threads.append(client_messages_thread)
+        client_messages_thread.start()
+
+        timeout_clients_thread = Thread(target=self.check_for_timeouts)
+        self.threads.append(timeout_clients_thread)
+        timeout_clients_thread.start()
+
+        game_over = False
+        while not game_over:
+            game_over = self.check_for_game_over()
+            time.sleep(GAME_CHECKING_DELAY)
+        logger.info("The game is over! stopping all threads and restarting")
+        self.running = False
+        for thread in self.threads:
+            thread.join()
+        logger.info("All of the threads stopped! restarting the server")
+
+    def handle_client_messages(self):
         while self.running:
             message, client_address = self.server_socket.recvfrom(1024)
             client_id = next((k for k, v in self.clients.items() if v == client_address), None)
@@ -70,18 +93,30 @@ class CommandsServer:
             self.last_active[client_id] = time.time()  # Update last active time
             self.action_queue.put((client_id, json.loads(message.decode())))
 
-    def check_for_timeouts(self):
-        current_time = time.time()
-        to_remove = []
-        for client_id, last_time in self.last_active.items():
-            if current_time - last_time > DISCONNECT_TIMEOUT:
-                to_remove.append(client_id)
+    def check_for_game_over(self):
+        if len(self.game.players) < 2:
+            return False  # only one player
+        is_player_alive = False
+        for player in self.game.players.values():
+            if player.hp > 0:
+                if is_player_alive:
+                    return False  # more than on player is alive
+                else:
+                    is_player_alive = True  # one player is alive
+        return True  # game is over
 
-        for client_id in to_remove:
-            self.cleanup_client(client_id)
-            logger.info(f"Client {client_id} has been disconnected due to inactivity.")
-        if self.running:
-            Timer(1, self.check_for_timeouts).start()  # Schedule next check in 1 second
+    def check_for_timeouts(self):
+        while self.running:
+            current_time = time.time()
+            to_remove = []
+            for client_id, last_time in self.last_active.items():
+                if current_time - last_time > DISCONNECT_TIMEOUT:
+                    to_remove.append(client_id)
+
+            for client_id in to_remove:
+                self.cleanup_client(client_id)
+                logger.info(f"Client {client_id} has been disconnected due to inactivity.")
+            time.sleep(1)
 
     def run_game_loop(self):
         """
@@ -93,16 +128,10 @@ class CommandsServer:
                 player_id, action = self.action_queue.get()
                 self.process_action(player_id, action)
 
-            dead_players, bullet_hits = self.game.update_bullets()
+            bullet_hits = self.game.update_bullets()
             for bullet_hit in bullet_hits:
                 self.handle_hit(bullet_hit)
-            for dead_player_id in dead_players:
-                self.handle_dead(dead_player_id)
             pygame.time.Clock().tick(60)
-
-    def handle_dead(self, dead_player_id):
-        logger.info(f"A player has died! with id ({dead_player_id})")
-        # TODO: make player dead and then check for game over. if the game is over reset the server
 
     def handle_hit(self, bullet_hit):
         """
@@ -207,5 +236,6 @@ class CommandsServer:
 
 
 if __name__ == "__main__":
-    cmd_server = CommandsServer()
-    cmd_server.start_server()
+    while True:
+        cmd_server = CommandsServer()
+        cmd_server.start_server()

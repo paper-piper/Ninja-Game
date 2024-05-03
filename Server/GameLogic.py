@@ -280,7 +280,6 @@ class Game:
         :return: dead_players: a list of all dead players
         :return: bullet_hits: a list of all bullet hits
         """
-        dead_players = []
         bullet_hits = []
         for player_id, player in self.players.items():
             for bullet in player.bullets[:]:
@@ -294,10 +293,8 @@ class Game:
                     player.bullets.remove(bullet)
                     logger.info(f"Detected player hit! on player id {hit_player_id}")
                     bullet_hits.append((hit_player_id, bullet.damage))
-                    if self.players[hit_player_id].hp <= 0:
-                        dead_players.append(hit_player_id)
 
-        return dead_players, bullet_hits
+        return bullet_hits
 
     def within_bounds(self, bullet):
         return 0 <= bullet.x <= self.map_width and 0 <= bullet.y <= self.map_height
