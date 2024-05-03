@@ -28,7 +28,7 @@ pil_logger.propagate = False
 screen_width = 800
 screen_height = 600
 SCREEN = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("Tank Game")
+pygame.display.set_caption("Ninja Game")
 
 # Images paths
 MAP_IMAGE_PATH = r'../Assets/Map/map.png'

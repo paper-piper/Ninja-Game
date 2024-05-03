@@ -21,7 +21,7 @@ logger = logging.getLogger("server")
 
 SERVER_IP = '0.0.0.0'
 SERVER_PORT = 12345
-DISCONNECT_TIMEOUT = 2  # seconds
+DISCONNECT_TIMEOUT = 10  # seconds
 
 # Action types
 MOVE_PLAYER = 'move'
@@ -46,6 +46,7 @@ class CommandsServer:
         self.clients = {}
         self.last_active = {}  # Stores last activity time for each client
         self.id_counter = 1   # starts from 1, since id zero is saved for acknowledge messages
+        self.running = True  # to manage all the threads
 
     def start_server(self):
         """
@@ -58,11 +59,8 @@ class CommandsServer:
         self.server_socket.bind((SERVER_IP, SERVER_PORT))
         self.check_for_timeouts()  # Start the timeout check loop
 
-        while True:
-            print("halolo")
+        while self.running:
             message, client_address = self.server_socket.recvfrom(1024)
-            logger.info(f"Received something! {message}")
-            print("Hi")
             client_id = next((k for k, v in self.clients.items() if v == client_address), None)
             if not client_id:
                 client_id = self.id_counter
@@ -82,15 +80,15 @@ class CommandsServer:
         for client_id in to_remove:
             self.cleanup_client(client_id)
             logger.info(f"Client {client_id} has been disconnected due to inactivity.")
-
-        Timer(1, self.check_for_timeouts).start()  # Schedule next check in 1 second
+        if self.running:
+            Timer(1, self.check_for_timeouts).start()  # Schedule next check in 1 second
 
     def run_game_loop(self):
         """
         Continuously process game actions from the action queue and update the game state,
         handling any bullet hits that occur.
         """
-        while True:
+        while self.running:
             while not self.action_queue.empty():
                 player_id, action = self.action_queue.get()
                 self.process_action(player_id, action)
@@ -98,9 +96,13 @@ class CommandsServer:
             dead_players, bullet_hits = self.game.update_bullets()
             for bullet_hit in bullet_hits:
                 self.handle_hit(bullet_hit)
-            for dead_player in dead_players:
-                logger.info(f"A player has died! {dead_player}")
+            for dead_player_id in dead_players:
+                self.handle_dead(dead_player_id)
             pygame.time.Clock().tick(60)
+
+    def handle_dead(self, dead_player_id):
+        logger.info(f"A player has died! with id ({dead_player_id})")
+        # TODO: make player dead and then check for game over. if the game is over reset the server
 
     def handle_hit(self, bullet_hit):
         """
