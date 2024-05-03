@@ -54,6 +54,7 @@ class CommandsServer:
         the server socket to listen for incoming client messages.
         """
         Thread(target=self.run_game_loop).start()
+        Thread(target=self.check_winning_loop).start()
         # start listening
         logger.info(f"Server started, listening on {SERVER_IP}:{SERVER_PORT}")
         self.server_socket.bind((SERVER_IP, SERVER_PORT))
@@ -82,6 +83,27 @@ class CommandsServer:
             logger.info(f"Client {client_id} has been disconnected due to inactivity.")
         if self.running:
             Timer(1, self.check_for_timeouts).start()  # Schedule next check in 1 second
+
+    def check_winning_loop(self):
+        while self.running:
+            if self.check_for_game_over():
+                logger.info("Game Over!")
+                return True
+            time.sleep(1)
+
+    def check_for_game_over(self):
+        if len(self.game.players) < 2:
+            return False  # only one player
+        is_player_alive = False
+        for player in self.game.players.values():
+            if player.hp > 0:
+                if is_player_alive:
+                    return False  # more than on player is alive
+                else:
+                    is_player_alive = True  # one player is alive
+        return True  # game is over
+
+
 
     def run_game_loop(self):
         """
