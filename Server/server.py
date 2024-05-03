@@ -1,7 +1,7 @@
 import socket
 import json
 import pygame
-from threading import Thread, Timer
+from threading import Thread
 from queue import Queue
 import GameLogic
 import logging
@@ -42,6 +42,7 @@ class CommandsServer:
         clients dictionary, and ID counter.
         """
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.server_socket.settimeout(1.0)  # Set timeout to 1 second
         self.game = GameLogic.Game()
         self.action_queue = Queue()
         self.clients = {}
@@ -55,43 +56,52 @@ class CommandsServer:
         Start the server by initiating the game loop in a separate thread and binding
         the server socket to listen for incoming client messages.
         """
-        logger.info(f"Server started, listening on {SERVER_IP}:{SERVER_PORT}")
-        self.server_socket.bind((SERVER_IP, SERVER_PORT))
+        try:
+            logger.info(f"Server started, listening on {SERVER_IP}:{SERVER_PORT}")
+            self.server_socket.bind((SERVER_IP, SERVER_PORT))
 
-        # start all the different threads
-        game_loop_thread = Thread(target=self.run_game_loop)
-        self.threads.append(game_loop_thread)
-        game_loop_thread.start()
+            # start all the different threads
+            game_loop_thread = Thread(target=self.run_game_loop)
+            self.threads.append(game_loop_thread)
+            game_loop_thread.start()
 
-        client_messages_thread = Thread(target=self.handle_client_messages)
-        self.threads.append(client_messages_thread)
-        client_messages_thread.start()
+            client_messages_thread = Thread(target=self.handle_client_messages)
+            self.threads.append(client_messages_thread)
+            client_messages_thread.start()
 
-        timeout_clients_thread = Thread(target=self.check_for_timeouts)
-        self.threads.append(timeout_clients_thread)
-        timeout_clients_thread.start()
+            timeout_clients_thread = Thread(target=self.check_for_timeouts)
+            self.threads.append(timeout_clients_thread)
+            timeout_clients_thread.start()
 
-        game_over = False
-        while not game_over:
-            game_over = self.check_for_game_over()
-            time.sleep(GAME_CHECKING_DELAY)
-        logger.info("The game is over! stopping all threads and restarting")
-        self.running = False
-        for thread in self.threads:
-            thread.join()
-        logger.info("All of the threads stopped! restarting the server")
-
+            game_over = False
+            while not game_over:
+                game_over = self.check_for_game_over()
+                time.sleep(GAME_CHECKING_DELAY)
+        except Exception as e:
+            logger.error(f"Caught an expetion while running the main server: {e}")
+        finally:
+            logger.info("The game is over! stopping all threads and restarting")
+            self.running = False
+            for thread, count in self.threads, range(3):
+                thread.join()
+                logger.info(f"thread number {count} has stopped!")
+            self.server_socket.close()
+            logger.info("All of the threads stopped! restarting the server")
+            time.sleep(1)
     def handle_client_messages(self):
         while self.running:
-            message, client_address = self.server_socket.recvfrom(1024)
-            client_id = next((k for k, v in self.clients.items() if v == client_address), None)
-            if not client_id:
-                client_id = self.id_counter
-                self.clients[self.id_counter] = client_address
-                self.id_counter += 1
+            try:
+                message, client_address = self.server_socket.recvfrom(1024)
+                client_id = next((k for k, v in self.clients.items() if v == client_address), None)
+                if not client_id:
+                    client_id = self.id_counter
+                    self.clients[self.id_counter] = client_address
+                    self.id_counter += 1
 
-            self.last_active[client_id] = time.time()  # Update last active time
-            self.action_queue.put((client_id, json.loads(message.decode())))
+                self.last_active[client_id] = time.time()  # Update last active time
+                self.action_queue.put((client_id, json.loads(message.decode())))
+            except socket.timeout:
+                continue  # No data received, loop back and check if still running
 
     def check_for_game_over(self):
         if len(self.game.players) < 2:
