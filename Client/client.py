@@ -94,64 +94,66 @@ class GameClient:
             # logger.info(f"Sent message: {message}")
         except socket.error as e:
             logger.error(f"Socket error during message sending: {e}")
-        except Exception as e:
-            logger.error(f"Failed to send message: {e}")
+        except json.JSONEncoder as e:
+            logger.error(f"JSON encode error during message sending: {e}")
 
     def receive_game_update(self) -> None:
         """
         Receive and process the updated game state from the server.
         """
+        # TODO: validate the message json file
         try:
-            # TODO: validate the message json file
             message, _ = self.client_socket.recvfrom(1024)
             game_update = json.loads(message.decode())
             self.action_queue.put(game_update)
-            # logger.info(f"Received action from server: {game_update}")
-        except socket.error:
-            # happens all the time, don't need to worry
-            return
-        except json.JSONDecodeError as e:
-            logger.error(f"JSON decode error: {e}")
-        except Exception as e:
-            logger.error(f"Error receiving game state: {e}")
+        except socket.timeout as st:
+            logger.error(f"Socket timeout error: {st}")
+        except Exception as ae:
+            logger.error(f"Error receiving game state: {ae}")
 
     def handle_key_events(self) -> None:
         """
         Process keyboard events and update the game object accordingly
         """
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                self.running = False
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                self.send_shoot_action(*self.game.get_mouse_angle())
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_a]:
-            # '0' means the client's player
-            self.game.move_player('0', 'left')
-        elif keys[pygame.K_d]:
-            self.game.move_player('0', 'right')
-        elif keys[pygame.K_w]:
-            self.game.move_player('0', 'up')
-        elif keys[pygame.K_s]:
-            self.game.move_player('0', 'down')
+        try:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    self.send_shoot_action(*self.game.get_mouse_angle())
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_a]:
+                # '0' means the client's player
+                self.game.move_player('0', 'left')
+            elif keys[pygame.K_d]:
+                self.game.move_player('0', 'right')
+            elif keys[pygame.K_w]:
+                self.game.move_player('0', 'up')
+            elif keys[pygame.K_s]:
+                self.game.move_player('0', 'down')
+        except pygame.error as e:
+            logger.error(f"Pygame error in handling key events: {e}")
 
     def handle_movements(self) -> None:
         """
         in each tick of the game, move each player by a bit to the actual position
         :return:
         """
-        for player_id, (target_x, target_y) in self.target_positions.items():
-            current_x, current_y = self.game.players[player_id].x, self.game.players[player_id].y
-            # Determine the direction to move based on target position
-            if target_x > current_x:
-                self.game.move_player(player_id, 'right')
-            elif target_x < current_x:
-                self.game.move_player(player_id, 'left')
+        try:
+            for player_id, (target_x, target_y) in self.target_positions.items():
+                current_x, current_y = self.game.players[player_id].x, self.game.players[player_id].y
+                # Determine the direction to move based on target position
+                if target_x > current_x:
+                    self.game.move_player(player_id, 'right')
+                elif target_x < current_x:
+                    self.game.move_player(player_id, 'left')
 
-            if target_y > current_y:
-                self.game.move_player(player_id, 'down')
-            elif target_y < current_y:
-                self.game.move_player(player_id, 'up')
+                if target_y > current_y:
+                    self.game.move_player(player_id, 'down')
+                elif target_y < current_y:
+                    self.game.move_player(player_id, 'up')
+        except KeyError as a:
+            logger.error(f"Key error in handling movements: {a}")
 
     def process_action_queue(self) -> None:
         """
@@ -178,9 +180,8 @@ class GameClient:
                 elif action_type == HIT_PLAYER:
                     self.game.players[player_id].take_damage(action_parameters[0])
                     print(f"He was shot! {action_parameters}")
-
-        except Exception as e:
-            logger.error(f"Error processing action queue: {e}")
+        except KeyError as e:
+            logger.error(f"Key error processing action queue: {e}")
 
     def send_player_state(self):
         """
@@ -223,15 +224,17 @@ class GameClient:
                     return
                 pygame.time.Clock().tick(60)
         except Exception as e:
-            logger.error(f"Error in main game loop: {e}")
+            logger.error(f"Unhandled exception in start method: {e}")
 
 
 if __name__ == "__main__":
     pygame.init()
-
-    while True:
-        menu = GameMenu.Menu()
-        settings, character = menu.run()
-        client = GameClient(character, UPDATE_DELAY, True if settings['sound'] == 'on' else False)
-        client.start()
+    try:
+        while True:
+            menu = GameMenu.Menu()
+            settings, character = menu.run()
+            client = GameClient(character, UPDATE_DELAY, settings['sound'] == 'on')
+            client.start()
+    except Exception as e:
+        logger.error(f"Unhandled exception in main loop: {e}")
 

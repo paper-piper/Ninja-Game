@@ -42,6 +42,8 @@ class CommandsServer:
         clients dictionary, and ID counter.
         """
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # Allow the socket to reuse the address (IP and port)
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.settimeout(1.0)  # Set timeout to 1 second
         self.game = GameLogic.Game()
         self.action_queue = Queue()
@@ -82,12 +84,13 @@ class CommandsServer:
         finally:
             logger.info("The game is over! stopping all threads and restarting")
             self.running = False
-            for thread, count in self.threads, range(3):
+            time.sleep(1)
+            for thread in self.threads:
                 thread.join()
-                logger.info(f"thread number {count} has stopped!")
+                logger.info(f"thread  {thread.name} has stopped!")
             self.server_socket.close()
             logger.info("All of the threads stopped! restarting the server")
-            time.sleep(1)
+
     def handle_client_messages(self):
         while self.running:
             try:
@@ -102,6 +105,8 @@ class CommandsServer:
                 self.action_queue.put((client_id, json.loads(message.decode())))
             except socket.timeout:
                 continue  # No data received, loop back and check if still running
+            except ConnectionResetError as cr:
+                logger.info(f"Having connection reset error as: {cr}, trying again")
 
     def check_for_game_over(self):
         if len(self.game.players) < 2:
