@@ -109,7 +109,7 @@ class GameClient:
         except socket.timeout as st:
             logger.error(f"Socket timeout error: {st}")
         except Exception as ae:
-            logger.error(f"Error receiving game state: {ae}")
+            logger.error(f"Error receiving game state: {ae}.")
 
     def handle_key_events(self) -> None:
         """
@@ -163,25 +163,25 @@ class GameClient:
             while not self.action_queue.empty():
                 action = self.action_queue.get()
                 action_type = action.get(ACTION_TYPE)
-                action_parameters = action.get(ACTION_PARAMETERS, [])
+                action_params = action.get(ACTION_PARAMETERS, [])
                 player_id = action.get(PLAYER_ID)
 
                 if action_type == PLAYER_INIT:
-                    logger.info(f"Got the player from server! {action_parameters[0], action_parameters[1], action_parameters[2]}")
-                    self.game.create_player(player_id, *action_parameters)
+                    logger.info(f"Got the player from server! {action_params[0], action_params[1], action_params[2]}")
+                    self.game.create_player(player_id, *action_params)
 
                 elif action_type == MOVE_PLAYER and player_id != '0':
-                    x, y = action_parameters[0], action_parameters[1]
+                    x, y = action_params[0], action_params[1]
                     self.target_positions[player_id] = (x, y)
 
                 elif action_type == SHOOT_PLAYER:
-                    self.game.shoot_player(player_id, *action_parameters)
+                    self.game.shoot_player(player_id, *action_params)
 
                 elif action_type == HIT_PLAYER:
-                    self.game.players[player_id].take_damage(action_parameters[0])
-                    print(f"He was shot! {action_parameters}")
-        except KeyError as e:
-            logger.error(f"Key error processing action queue: {e}")
+                    self.game.players[player_id].take_damage(action_params[0])
+                    print(f"He was shot! {action_params}")
+        except KeyError as keyrr:
+            logger.error(f"Key error processing action queue: {keyrr}")
 
     def send_player_state(self):
         """
@@ -223,8 +223,8 @@ class GameClient:
                     self.running = False
                     return
                 pygame.time.Clock().tick(60)
-        except Exception as e:
-            logger.error(f"Unhandled exception in start method: {e}")
+        except Exception as exp:
+            logger.error(f"Unhandled exception in start method: {exp}")
 
 
 if __name__ == "__main__":
@@ -235,6 +235,6 @@ if __name__ == "__main__":
             settings, character = menu.run()
             client = GameClient(character, UPDATE_DELAY, settings['sound'] == 'on')
             client.start()
-    except Exception as e:
-        logger.error(f"Unhandled exception in main loop: {e}")
+    except Exception as mainexpetion:
+        logger.error(f"Unhandled exception in main loop: {mainexpetion}")
 

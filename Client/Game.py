@@ -510,7 +510,10 @@ class Game:
         # Calculate number of hearts to display
         num_full_hearts = self.player.hp // 4
         partial_heart = self.player.hp % 4
-        num_empty_hearts = (self.player.max_hp // 4) - num_full_hearts - (1 if partial_heart > 0 else 0)
+        num_empty_hearts = ((self.player.max_hp // 4)
+                            - num_full_hearts
+                            - (1 if partial_heart > 0 else 0)
+                            + (1 if self.player.max_hp % 4 != 0 else 0))
 
         # Coordinates to draw the hearts
         x = 10  # starting x position (10 pixels from the left)
