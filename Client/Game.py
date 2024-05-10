@@ -457,7 +457,7 @@ class Game:
         self.screen.blit(image, image_position)
         pygame.display.flip()
         # Wait for the music to finish before continuing with random music
-        time.sleep(4)
+        time.sleep(2)
         pygame.mixer.music.stop()
 
         # Indicate that game over music has finished

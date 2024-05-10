@@ -97,7 +97,6 @@ class GameClient:
         except json.JSONEncoder as e:
             logger.error(f"JSON encode error during message sending: {e}")
 
-
     def receive_game_update(self) -> None:
         """
         Receive and process the updated game state from the server.
@@ -233,7 +232,10 @@ def validate_json_game_update(game_update):
         logger.error("Message is not a dictionary")
         return False
 
-    if ACTION_TYPE not in game_update or game_update[ACTION_TYPE] not in [MOVE_PLAYER, SHOOT_PLAYER, PLAYER_INIT, HIT_PLAYER]:
+    if ACTION_TYPE not in game_update or game_update[ACTION_TYPE] not in [MOVE_PLAYER,
+                                                                          SHOOT_PLAYER,
+                                                                          PLAYER_INIT,
+                                                                          HIT_PLAYER]:
         logger.error("Invalid or missing 'type' in message")
         return False
 
@@ -249,17 +251,15 @@ def validate_json_game_update(game_update):
 
 
 if __name__ == "__main__":
-    # Example usage:
     valid_message = {
-        ACTION_TYPE: 'move',
-        ACTION_PARAMETERS: "[1, 2, 3]",
+        ACTION_TYPE: PLAYER_INIT,
+        ACTION_PARAMETERS: "[DarkNinja, 20, 30]",
         PLAYER_ID: 123
     }
     invalid_message = {
-        ACTION_TYPE: 'mve',
-        ACTION_PARAMETERS: "[1, 2,, 3]",
-        PLAYER_ID: 123
-    }
+        ACTION_TYPE: MOVE_PLAYER,
+        ACTION_PARAMETERS: "[2, 3]",
+    }  # doesn't have player id
     assert validate_json_game_update(valid_message)
     assert not validate_json_game_update(invalid_message)
     pygame.init()

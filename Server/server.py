@@ -67,7 +67,7 @@ class CommandsServer:
             self.threads.append(game_loop_thread)
             game_loop_thread.start()
 
-            client_messages_thread = Thread(target=self.handle_client_messages)
+            client_messages_thread = Thread(target=self.handle_clients_messages)
             self.threads.append(client_messages_thread)
             client_messages_thread.start()
 
@@ -80,7 +80,7 @@ class CommandsServer:
                 game_over = self.check_for_game_over()
                 time.sleep(GAME_CHECKING_DELAY)
         except Exception as e:
-            logger.error(f"Caught an expetion while running the main server: {e}")
+            logger.error(f"Caught an expedition while running the main server: {e}")
         finally:
             logger.info("The game is over! stopping all threads and restarting")
             self.running = False
@@ -91,18 +91,20 @@ class CommandsServer:
             self.server_socket.close()
             logger.info("All of the threads stopped! restarting the server")
 
-    def handle_client_messages(self):
+    def handle_clients_messages(self):
         while self.running:
             try:
                 message, client_address = self.server_socket.recvfrom(1024)
-                client_id = next((k for k, v in self.clients.items() if v == client_address), None)
-                if not client_id:
-                    client_id = self.id_counter
-                    self.clients[self.id_counter] = client_address
-                    self.id_counter += 1
+                game_update = json.loads(message.decode())
+                if validate_json_game_update(game_update):
+                    client_id = next((k for k, v in self.clients.items() if v == client_address), None)
+                    if not client_id:
+                        client_id = self.id_counter
+                        self.clients[self.id_counter] = client_address
+                        self.id_counter += 1
 
-                self.last_active[client_id] = time.time()  # Update last active time
-                self.action_queue.put((client_id, json.loads(message.decode())))
+                    self.last_active[client_id] = time.time()  # Update last active time
+                    self.action_queue.put((client_id, game_update))
             except socket.timeout:
                 continue  # No data received, loop back and check if still running
             except ConnectionResetError as cr:
@@ -221,6 +223,7 @@ class CommandsServer:
         sends a 'close' message.
         :param player_id: the unique ID of the client to clean up
         """
+
         if player_id in self.clients:
             del self.clients[player_id]
             del self.last_active[player_id]
@@ -250,6 +253,35 @@ class CommandsServer:
         self.server_socket.sendto(message_json.encode(), client_address)
 
 
+def validate_json_game_update(game_update):
+    if not isinstance(game_update, dict):
+        logger.error("invalid message: Message is not a dictionary")
+        return False
+
+    if ACTION_TYPE not in game_update or game_update[ACTION_TYPE] not in [MOVE_PLAYER,
+                                                                          SHOOT_PLAYER,
+                                                                          PLAYER_INIT,
+                                                                          HIT_PLAYER]:
+        logger.error("invalid message: Invalid or missing 'type' in message")
+        return False
+
+    if ACTION_PARAMETERS not in game_update:
+        logger.error("invalid message: Missing 'action_parameters' in message")
+        return False
+
+    return True
+
+
 if __name__ == "__main__":
+    valid_message = {
+        ACTION_TYPE: PLAYER_INIT,
+        ACTION_PARAMETERS: "[DarkNinja]",
+    }
+    invalid_message = {
+        ACTION_TYPE: 'move_player',  # invalid action type
+        ACTION_PARAMETERS: "[50,30]",
+    }
+    assert validate_json_game_update(valid_message)
+    assert not validate_json_game_update(invalid_message)
     cmd_server = CommandsServer()
     cmd_server.start_server()
