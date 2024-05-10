@@ -7,6 +7,8 @@ import Game
 from threading import Thread
 import logging
 from queue import Queue
+import ast
+
 
 logging.basicConfig(
     filename='client.log',
@@ -24,7 +26,6 @@ MOVE_PLAYER = 'move'
 SHOOT_PLAYER = 'shoot'
 PLAYER_INIT = 'player_init'
 HIT_PLAYER = 'hit'
-
 
 # Server response keys
 ACTION_TYPE = 'type'
@@ -86,7 +87,6 @@ class GameClient:
         :param message: The message dictionary to send
         """
         try:
-            # TODO: integrate to lengthen messages
             message_str = json.dumps(message)
             message_length = len(message_str)
             full_message = str(message_length) + message_str
@@ -97,15 +97,16 @@ class GameClient:
         except json.JSONEncoder as e:
             logger.error(f"JSON encode error during message sending: {e}")
 
+
     def receive_game_update(self) -> None:
         """
         Receive and process the updated game state from the server.
         """
-        # TODO: validate the message json file
         try:
             message, _ = self.client_socket.recvfrom(1024)
             game_update = json.loads(message.decode())
-            self.action_queue.put(game_update)
+            if validate_json_game_update(game_update):
+                self.action_queue.put(game_update)
         except socket.timeout as st:
             logger.error(f"Socket timeout error: {st}")
         except Exception as ae:
@@ -227,7 +228,40 @@ class GameClient:
             logger.error(f"Unhandled exception in start method: {exp}")
 
 
+def validate_json_game_update(game_update):
+    if not isinstance(game_update, dict):
+        logger.error("Message is not a dictionary")
+        return False
+
+    if ACTION_TYPE not in game_update or game_update[ACTION_TYPE] not in [MOVE_PLAYER, SHOOT_PLAYER, PLAYER_INIT, HIT_PLAYER]:
+        logger.error("Invalid or missing 'type' in message")
+        return False
+
+    if ACTION_PARAMETERS not in game_update:
+        logger.error("Missing 'action_parameters' in message")
+        return False
+
+    if PLAYER_ID not in game_update:
+        logger.error("Missing 'PLAYER_ID' in message")
+        return False
+
+    return True
+
+
 if __name__ == "__main__":
+    # Example usage:
+    valid_message = {
+        ACTION_TYPE: 'move',
+        ACTION_PARAMETERS: "[1, 2, 3]",
+        PLAYER_ID: 123
+    }
+    invalid_message = {
+        ACTION_TYPE: 'mve',
+        ACTION_PARAMETERS: "[1, 2,, 3]",
+        PLAYER_ID: 123
+    }
+    assert validate_json_game_update(valid_message)
+    assert not validate_json_game_update(invalid_message)
     pygame.init()
     try:
         menu = GameMenu.Menu()
@@ -235,6 +269,5 @@ if __name__ == "__main__":
         client = GameClient(character, UPDATE_DELAY, settings['sound'] == 'on')
         client.start()
         pygame.quit()
-    except Exception as mainexpetion:
-        logger.error(f"Unhandled exception in main loop: {mainexpetion}")
-
+    except Exception as main_loop_exception:
+        logger.error(f"Unhandled exception in main loop: {main_loop_exception}")
