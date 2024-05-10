@@ -272,7 +272,8 @@ class Game:
         # return 20, 30
         return x, y
 
-    def find_random_free_position(self, character_width, character_height):
+    @staticmethod
+    def find_random_free_position(character_width, character_height):
         """
         Find a random position within the map where an object of the given size can be placed without collision.
 
@@ -339,7 +340,6 @@ class Game:
                 hit_player_id = self.check_bullet_hit(player_id, bullet)
                 if hit_player_id:
                     player.bullets.remove(bullet)
-                    logger.info(f"Detected player hit! on player id {hit_player_id}")
                     bullet_hits.append((hit_player_id, bullet.damage))
 
         return bullet_hits
@@ -462,5 +462,5 @@ def is_colliding_at(x, y, is_player):
             pixel_color = bullet_collision_map.getpixel((int_x, int_y))
         alpha = pixel_color[3]
         return not alpha == 0
-    except Exception as e:
+    except IndexError as e:
         return True

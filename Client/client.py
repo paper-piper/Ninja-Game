@@ -7,7 +7,6 @@ import Game
 from threading import Thread
 import logging
 from queue import Queue
-import ast
 
 
 logging.basicConfig(
