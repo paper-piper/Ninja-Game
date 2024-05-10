@@ -44,42 +44,18 @@ CHARACTER_HEIGHT = 32
 SHOOTING_CHANCE = 0.05
 
 
-class Camera:
-    def __init__(self, width, height):
-        self.camera = pygame.Rect(0, 0, screen_width, screen_height)
-        self.width = width
-        self.height = height
-        self.speed = 5  # Camera movement speed
-
-    def apply(self, entity):
-        # Move the entity's position according to the camera's position
-        return entity.rect.move(-self.camera.x, -self.camera.y)
-
-    def update(self, direction):
-        if direction == 'left':
-            self.camera.x = max(self.camera.x - self.speed, 0)
-        elif direction == 'right':
-            self.camera.x = min(self.camera.x + self.speed, self.width - screen_width)
-        if direction == 'up':
-            self.camera.y = max(self.camera.y - self.speed, 0)
-        elif direction == 'down':
-            self.camera.y = min(self.camera.y + self.speed, self.height - screen_height)
-
-    def follow_target(self, target):
-        x = -target.rect.x + int(screen_width / 2)
-        y = -target.rect.y + int(screen_height / 2)
-
-        # limit scrolling to map size
-        x = min(0, x)  # left
-        y = min(0, y)  # top
-        x = max(-(self.width - screen_width), x)  # right
-        y = max(-(self.height - screen_height), y)  # bottom
-
-        self.camera = pygame.Rect(x, y, self.width, self.height)
-
-
 class Character:
     def __init__(self, name, hp, speed, bullet_speed, bullet_damage, bullet_lifespan, shooting_cooldown):
+        """
+        Initializes a new character with specific attributes.
+        :param name: Name of the character
+        :param hp: Health points of the character
+        :param speed: Movement speed of the character
+        :param bullet_speed: Speed of the bullets fired by this character
+        :param bullet_damage: Damage dealt by each bullet
+        :param bullet_lifespan: How long the bullet exists before disappearing
+        :param shooting_cooldown: Cooldown time between shots
+        """
         self.name = name
         self.hp = hp
         self.speed = speed
@@ -91,7 +67,14 @@ class Character:
 
 class Player:
     def __init__(self, character, x, y, width, height):
-        # game qualities
+        """
+        Initializes a new player with specific position and dimensions.
+        :param character: A Character object representing the player's character
+        :param x: Initial x-coordinate of the player
+        :param y: Initial y-coordinate of the player
+        :param width: Width of the player
+        :param height: Height of the player
+        """
         self.x = x
         self.y = y
         self.width = width
@@ -115,12 +98,23 @@ class Player:
         self.shooting_cooldown = character.shooting_cooldown
 
     def set_cords(self, x, y):
+        """
+        Updates the player's x and y coordinates and accordingly updates their rect position.
+        :param x: New x-coordinate of the player
+        :param y: New y-coordinate of the player
+        """
+
         self.x = x
         self.y = y
         self.rect.x = self.x
         self.rect.y = self.y
 
     def move(self, direction):
+        """
+        Moves the player in a given direction and handles animation frame updates.
+        :param direction: The direction to move ('left', 'right', 'up', 'down')
+        """
+
         dx = dy = 0
         if direction == 'left':
             dx = -self.speed
@@ -153,6 +147,12 @@ class Player:
         self.rect.y = self.y
 
     def shoot(self, dx, dy):
+        """
+        Handles the shooting mechanics for a player, creating a bullet if the cooldown period has passed.
+        :param dx: X-component of the bullet's direction
+        :param dy: Y-component of the bullet's direction
+        """
+
         current_time = pygame.time.get_ticks()
         if current_time - self.last_shot_time > self.shooting_cooldown:
             self.last_shot_time = current_time
@@ -178,14 +178,29 @@ class Player:
             )
 
     def take_damage(self, damage):
+        """
+        Decreases the player's health by a specified amount and handles player death if health reaches zero.
+        :param damage: Amount of damage to apply to the player
+        """
         self.hp -= damage
         if self.hp <= 0:
             self.hp = 0
-            # Handle player death here if needed
 
 
 class Bullet:
     def __init__(self, x, y, dx, dy, radius, damage, owner, lifespan):
+        """
+        Initializes a new bullet with specific attributes and position.
+        :param x: Initial x-coordinate of the bullet
+        :param y: Initial y-coordinate of the bullet
+        :param dx: X-component of the bullet's movement
+        :param dy: Y-component of the bullet's movement
+        :param radius: Radius of the bullet
+        :param damage: Damage the bullet can inflict
+        :param owner: The player or character that fired the bullet
+        :param lifespan: How long the bullet exists before disappearing
+        """
+
         self.x = x
         self.y = y
         self.dx = dx
@@ -201,6 +216,11 @@ class Bullet:
         self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
 
     def move(self):
+        """
+        Updates the bullet's position and decreases its lifespan. Also handles collision checks.
+        :return: True if the bullet should be removed (either expired lifespan or collided), False otherwise
+        """
+
         self.lifespan -= 1  # Decrease lifespan each frame
         if self.lifespan <= 0:
             return True  # Signal to remove this bullet
@@ -218,15 +238,24 @@ class Bullet:
 
 class Game:
     def __init__(self):
+        """
+        Initializes the game environment, setting up the map dimensions and camera.
+        """
         global MAP_WIDTH, MAP_HEIGHT
         MAP_WIDTH, MAP_HEIGHT = get_image_dimensions(MAP_IMAGE_PATH)
         # screen = pygame.display.set_mode((screen_width, screen_height))
         # self.screen = screen
         self.map_width, self.map_height = get_image_dimensions(MAP_IMAGE_PATH)
-        self.camera = Camera(self.map_width, self.map_height)
-        self.players: dict[str,Player] = {}
+        self.players: dict[str, Player] = {}
 
     def create_player(self, player_id, character_name):
+        """
+        Creates a new player based on a character name and places them at a random position on the map.
+        :param player_id: Identifier for the new player
+        :param character_name: Name of the character to base the player on
+        :return: Tuple (x, y) representing the position where the player was created
+        """
+
         x, y = self.find_random_free_position(CHARACTER_WIDTH, CHARACTER_HEIGHT)
         if not x:
             logger.error("Didn't found any x,y for the player to be created")
@@ -263,23 +292,42 @@ class Game:
         return 100, 50
 
     def delete_player(self, player_id):
+        """
+        Removes a player from the game based on their identifier.
+        :param player_id: Identifier of the player to remove
+        """
+
         if player_id in self.players:
             del self.players[player_id]
 
-    def set_cords(self, player_id, x,y):
+    def set_cords(self, player_id, x, y):
+        """
+        Sets new coordinates for a player identified by player_id.
+
+        :param player_id: Identifier of the player
+        :param x: New x-coordinate
+        :param y: New y-coordinate
+        """
         if player_id in self.players:
             self.players[player_id].set_cords(x, y)
 
     def shoot_player(self, player_id, dx, dy):
+        """
+        Triggers the shooting mechanism for a specific player.
+        :param player_id: Identifier of the shooting player
+        :param dx: X-component of the bullet's direction
+        :param dy: Y-component of the bullet's direction
+        """
+
         if player_id in self.players:
             self.players[player_id].shoot(dx, dy)
 
     def update_bullets(self):
         """
-        move the bullets and return bullet hits and death
-        :return: dead_players: a list of all dead players
-        :return: bullet_hits: a list of all bullet hits
+        Updates the positions of all bullets, checks for hits, and manages out-of-bounds bullets.
+        :return: bullet_hits: List of bullet hits including the impacted player IDs and the damage dealt
         """
+
         bullet_hits = []
         for player_id, player in self.players.items():
             for bullet in player.bullets[:]:
@@ -297,15 +345,23 @@ class Game:
         return bullet_hits
 
     def within_bounds(self, bullet):
+        """
+        Checks whether a bullet's position is within the bounds of the map.
+
+        :param bullet: The bullet to check
+        :return: True if the bullet is within the map bounds, otherwise False
+        """
+
         return 0 <= bullet.x <= self.map_width and 0 <= bullet.y <= self.map_height
 
     def check_bullet_hit(self, shooter_id, bullet):
         """
-        check bullet hit and decrement health if so
-        :param shooter_id:
-        :param bullet:
-        :return:
+        Checks if a bullet has hit any player except the shooter.
+        :param shooter_id: ID of the player who shot bullet
+        :param bullet: The bullet to check for hits
+        :return: ID of the player hit by the bullet, if any
         """
+
         for player_id, player in self.players.items():
             if player_id != shooter_id and player.rect.collidepoint(bullet.x, bullet.y):
                 player.take_damage(bullet.damage)
@@ -313,10 +369,23 @@ class Game:
         return None  # No hit detected
 
     def get_player(self, player_id):
+        """
+        Retrieves a player object based on player ID.
+        :param player_id: ID of the player to retrieve
+        :return: The Player object associated with the given ID
+        """
+
         return self.players[player_id]
 
 
 def load_character_from_json(file_path, name):
+    """
+    Loads character data from a JSON file and creates a Character object.
+    :param file_path: Path to the JSON file containing character data
+    :param name: Name of the character to load
+    :return: A Character object with data loaded from the file
+    """
+
     with open(file_path, 'r') as file:
         data = json.load(file)
 
@@ -336,6 +405,12 @@ def load_character_from_json(file_path, name):
 
 
 def get_image_dimensions(image_path):
+    """
+    Calculates the dimensions of an image.
+    :param image_path: Path to the image file
+    :return: Tuple (width, height) representing the dimensions of the image
+    """
+
     with Image.open(image_path) as img:
         width, height = img.size
     return width, height
@@ -343,14 +418,15 @@ def get_image_dimensions(image_path):
 
 def check_collision(x, y, width, height, is_player):
     """
-
-    :param x:
-    :param y:
-    :param width:
-    :param height:
-    :param is_player: if is player, use player collision else bullet collision
-    :return: bool, true if you can move, false if not
+    Checks for collision at specified coordinates with specified dimensions, using different collision maps based on the entity type.
+    :param x: X-coordinate of the top-left corner to check
+    :param y: Y-coordinate of the top-left corner to check
+    :param width: Width of the area to check
+    :param height: Height of the area to check
+    :param is_player: True if checking for player collisions, False for bullet collisions
+    :return: True if a collision is detected, False otherwise
     """
+
     try:
         # Loop through the edges of the rectangle
         for i in range(x, x + width):
@@ -370,12 +446,13 @@ def check_collision(x, y, width, height, is_player):
 
 def is_colliding_at(x, y, is_player):
     """
-    checking if some pixel is colliding with a map object
-    :param x: the pixel's x
-    :param y: the pixel's y
-    :param is_player: if is player, use player collision else bullet collision
-    :return:
+    Determines if a given point collides with an obstacle on the map, based on whether it's a player or a bullet.
+    :param x: X-coordinate of the point to check
+    :param y: Y-coordinate of the point to check
+    :param is_player: True if the point is related to a player, False if related to a bullet
+    :return: True if there is a collision at the specified point, otherwise False
     """
+
     try:
         int_x = int(x)
         int_y = int(y)
