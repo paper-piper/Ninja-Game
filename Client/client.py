@@ -230,11 +230,11 @@ class GameClient:
 if __name__ == "__main__":
     pygame.init()
     try:
-        while True:
-            menu = GameMenu.Menu()
-            settings, character = menu.run()
-            client = GameClient(character, UPDATE_DELAY, settings['sound'] == 'on')
-            client.start()
+        menu = GameMenu.Menu()
+        settings, character = menu.run()
+        client = GameClient(character, UPDATE_DELAY, settings['sound'] == 'on')
+        client.start()
+        pygame.quit()
     except Exception as mainexpetion:
         logger.error(f"Unhandled exception in main loop: {mainexpetion}")
 

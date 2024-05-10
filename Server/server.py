@@ -251,6 +251,5 @@ class CommandsServer:
 
 
 if __name__ == "__main__":
-    while True:
-        cmd_server = CommandsServer()
-        cmd_server.start_server()
+    cmd_server = CommandsServer()
+    cmd_server.start_server()
