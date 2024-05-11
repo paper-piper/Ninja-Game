@@ -42,7 +42,7 @@ class Menu:
         thread.start()
         # pygame.mixer.music.play(-1)  # Play music indefinitely
         self.settings = {'sound': 'on', 'difficulty': 'easy'}
-        self.character = "Shadow"  # defualt character
+        self.character = "Shadow"  # default character
         self.current_menu = 'Main Menu'
         self.title = "Ninja Game"  # Default title for the main menu
         self.title_surface = self.font.render(self.title, True, (255, 255, 255))
@@ -215,20 +215,21 @@ class CharacterSelectMenu:
         characters_path = '../Assets/Characters'
         characters = []
         # List directories in the characters path
-        for character_name in os.listdir(characters_path):
-            character_folder = os.path.join(characters_path, character_name)
+        for char_name in os.listdir(characters_path):
+            character_folder = os.path.join(characters_path, char_name)
             if os.path.isdir(character_folder):
                 image_path = os.path.join(character_folder, 'Faceset.png')
                 # Check if the image file exists
                 if os.path.isfile(image_path):
                     characters.append({
-                        'name': character_name,
+                        'name': char_name,
                         'image_path': image_path,
                         'scaled_image': self.scale_image(image_path, 3)
                     })
         return characters
 
-    def scale_image(self, image_path, scale_factor):
+    @staticmethod
+    def scale_image(image_path, scale_factor):
         """
         Scale an image from a given path by a specified factor.
         :param image_path: Path to the image file

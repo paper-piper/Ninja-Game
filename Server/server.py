@@ -92,6 +92,10 @@ class CommandsServer:
             logger.info("All of the threads stopped! restarting the server")
 
     def handle_clients_messages(self):
+        """
+        handle all the different client's message
+        :return: None
+        """
         while self.running:
             try:
                 message, client_address = self.server_socket.recvfrom(1024)
@@ -111,6 +115,10 @@ class CommandsServer:
                 logger.info(f"Having connection reset error as: {cr}, trying again")
 
     def check_for_game_over(self):
+        """
+        check if the game is over, is handle is_player_alive
+        :return: true if the game is over
+        """
         if len(self.game.players) < 2:
             return False  # only one player
         is_player_alive = False
@@ -123,6 +131,10 @@ class CommandsServer:
         return True  # game is over
 
     def check_for_timeouts(self):
+        """
+        a self depended on thread which checks if client didn't send a message for disconnected timeout time
+        :return:
+        """
         while self.running:
             current_time = time.time()
             to_remove = []

@@ -418,7 +418,8 @@ def get_image_dimensions(image_path):
 
 def check_collision(x, y, width, height, is_player):
     """
-    Checks for collision at specified coordinates with specified dimensions, using different collision maps based on the entity type.
+    Checks for collision at specified coordinates with specified dimensions,
+    using different collision maps based on the entity type.
     :param x: X-coordinate of the top-left corner to check
     :param y: Y-coordinate of the top-left corner to check
     :param width: Width of the area to check
@@ -462,5 +463,5 @@ def is_colliding_at(x, y, is_player):
             pixel_color = bullet_collision_map.getpixel((int_x, int_y))
         alpha = pixel_color[3]
         return not alpha == 0
-    except IndexError as e:
+    except IndexError:
         return True

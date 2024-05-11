@@ -151,7 +151,8 @@ class Character:
         self.bullet_image = pygame.image.load(f'../Assets/Characters/{name}/Weapon.png').convert_alpha()
         self.sprites = self.load_sprites(name)
 
-    def load_sprites(self, name):
+    @staticmethod
+    def load_sprites(name):
         """
         load the sprite images of some character
         :param name: the character name
@@ -351,7 +352,8 @@ class Bullet:
 
         self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
 
-    def load_bullet_sprites(self, sprite_sheet, frames_number):
+    @staticmethod
+    def load_bullet_sprites(sprite_sheet, frames_number):
         """
         Load and prepare bullet sprites from a sprite sheet.
         :param sprite_sheet: The sprite sheet surface from which to extract bullet frames
@@ -550,7 +552,7 @@ class Game:
         :param y: The initial y-coordinate for the player
         :return: None
         """
-        character = load_character_from_json(character_name)
+        character = self.load_character_from_json(character_name)
         player = Player(
             character,
             x,
@@ -592,16 +594,6 @@ class Game:
         """
         if player_id in self.players:
             self.players[player_id].shoot(dx, dy)
-
-    def check_for_quit(self):
-        """
-        Check if the game has received a quit event.
-        :return: Boolean indicating if the game should continue running (False if it should quit)
-        """
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return False
-        return True
 
     def update_bullets(self):
         """
@@ -723,36 +715,37 @@ class Game:
             pygame.time.wait(UPDATE_MUSIC_DELAY)
         pygame.mixer.music.stop()
 
-def load_character_from_json(name):
-    """
-    Load character data from a JSON file.
-    :param name: The name of the character to load
-    :return: A Character object
-    """
-    try:
-        with open(CHARACTER_STATS_FILE_PATH, 'r') as file:
-            data = json.load(file)
-        for char_data in data['characters']:
-            if char_data['name'] == name:
-                return Character(
-                    name=char_data['name'],
-                    hp=char_data['hp'],
-                    speed=char_data['speed'],
-                    bullet_speed=char_data['bullet_speed'],
-                    bullet_damage=char_data['bullet_damage'],
-                    bullet_lifespan=char_data['bullet_lifespan'],
-                    shooting_cooldown=char_data['shooting_cooldown']
-                )
-        raise ValueError(f"No character found with the name {name}")
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON Decode Error: {e}")
-        raise
-    except FileNotFoundError as e:
-        logger.error(f"File not found: {e}")
-        raise
-    except Exception as e:
-        logger.error(f"Error loading character data: {e}")
-        raise
+    @staticmethod
+    def load_character_from_json(name):
+        """
+        Load character data from a JSON file.
+        :param name: The name of the character to load
+        :return: A Character object
+        """
+        try:
+            with open(CHARACTER_STATS_FILE_PATH, 'r') as file:
+                data = json.load(file)
+            for char_data in data['characters']:
+                if char_data['name'] == name:
+                    return Character(
+                        name=char_data['name'],
+                        hp=char_data['hp'],
+                        speed=char_data['speed'],
+                        bullet_speed=char_data['bullet_speed'],
+                        bullet_damage=char_data['bullet_damage'],
+                        bullet_lifespan=char_data['bullet_lifespan'],
+                        shooting_cooldown=char_data['shooting_cooldown']
+                    )
+            raise ValueError(f"No character found with the name {name}")
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON Decode Error: {e}")
+            raise
+        except FileNotFoundError as e:
+            logger.error(f"File not found: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Error loading character data: {e}")
+            raise
 
 
 def get_image_dimensions(image_path):

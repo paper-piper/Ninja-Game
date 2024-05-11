@@ -1,3 +1,6 @@
+![My Project Logo](Assets/GUI/logo.png)
+
+
 # Ninja Game
 
 Welcome to **Ninja Game**, a retro pixel art, 2D top-down game where strategy and character selection are key to your success in battle against other players.

@@ -105,10 +105,12 @@ class GameClient:
             game_update = json.loads(message.decode())
             if validate_json_game_update(game_update):
                 self.action_queue.put(game_update)
+            else:
+                logger.error(f"Error while validating game update, the game update: {game_update}")
         except socket.timeout as st:
             logger.error(f"Socket timeout error: {st}")
-        except Exception as ae:
-            logger.error(f"Error receiving game state: {ae}.")
+        except Exception:
+            pass
 
     def handle_key_events(self) -> None:
         """
@@ -227,23 +229,24 @@ class GameClient:
 
 
 def validate_json_game_update(game_update):
+    """
+    make sure the json game update is valid and didn't get corrupted during the sending process
+    :param game_update:
+    :return: True if is fine, false otherwise
+    """
     if not isinstance(game_update, dict):
-        logger.error("Message is not a dictionary")
         return False
 
     if ACTION_TYPE not in game_update or game_update[ACTION_TYPE] not in [MOVE_PLAYER,
                                                                           SHOOT_PLAYER,
                                                                           PLAYER_INIT,
                                                                           HIT_PLAYER]:
-        logger.error("Invalid or missing 'type' in message")
         return False
 
     if ACTION_PARAMETERS not in game_update:
-        logger.error("Missing 'action_parameters' in message")
         return False
 
     if PLAYER_ID not in game_update:
-        logger.error("Missing 'PLAYER_ID' in message")
         return False
 
     return True
