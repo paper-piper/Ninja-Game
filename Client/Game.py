@@ -726,7 +726,7 @@ class Game:
                         play_music()
                 pygame.time.wait(UPDATE_MUSIC_DELAY)
             pygame.mixer.music.stop()
-        except pygame.error as pe:
+        except pygame.error:
             pass
 
     @staticmethod

@@ -152,9 +152,9 @@ class GameClient:
                 self.action_queue.put(game_update)
             else:
                 logger.error(f"Error while validating game update, the game update: {game_update}")
-        except socket.timeout as st:
+        except socket.timeout:
             pass
-        except socket.error as se:
+        except socket.error:
             pass
 
     def handle_key_events(self) -> None:
