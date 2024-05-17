@@ -103,12 +103,16 @@ class CommandsServer:
 
     def handle_clients_messages(self):
         """
-        handle all the different client's message
+        handle all the different client's messages
+        if received invalid message, dump it
         :return: None
         """
         while self.running:
             try:
-                message, client_address = self.receive_message_from_client()
+                message = None
+                client_address = None
+                while not message and not client_address:
+                    message, client_address = self.receive_message_from_client()
                 game_update = json.loads(message)
                 if validate_json_game_update(game_update):
                     client_id = next((k for k, v in self.clients.items() if v == client_address), None)
@@ -125,6 +129,11 @@ class CommandsServer:
                 logger.info(f"Having connection reset error as: {cr}, trying again")
 
     def receive_message_from_client(self):
+        """
+        get the message from client
+        :return: message: the client message
+        :return client_address: the client who sent the message
+        """
         data, client_address = self.server_socket.recvfrom(1024)  # Adjust buffer size as needed
         data = data.decode()
 
@@ -143,7 +152,7 @@ class CommandsServer:
                 break
             else:
                 logger.error(f"Invalid char while reading message length: {char}")
-                return None
+                return
 
         # Convert the length string to an integer
         length = int(length_str)

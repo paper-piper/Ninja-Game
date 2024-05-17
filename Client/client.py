@@ -114,6 +114,7 @@ class GameClient:
     def receive_game_update(self) -> None:
         """
         Receive and process the updated game state from the server.
+        if the game update isn't valid, dump the message
         """
         try:
             # Read the entire datagram
@@ -135,7 +136,7 @@ class GameClient:
                     break
                 else:
                     logger.error(f"Invalid char while reading message length: {char}")
-                    return None
+                    return
 
             # Convert the length string to an integer
             length = int(length_str)
