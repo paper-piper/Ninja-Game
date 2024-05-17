@@ -1,3 +1,10 @@
+"""
+Author: Yoni Reichert
+Program name: client.py
+Description: Runs the ninja game logic without displaying it on screen according to server actions
+Date: 17-05-2024
+"""
+
 import pygame
 from PIL import Image
 import json
@@ -17,12 +24,9 @@ pil_logger = logging.getLogger('PIL')
 pil_logger.setLevel(logging.WARNING)
 pil_logger.propagate = False
 
-# Set up the display
-screen_width = 800
-screen_height = 600
-# SCREEN = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption("Ninja Game")
 
-pygame.display.set_caption("Tank Game")
+# ------------------------------------------------ CONSTANTS ----------------------------------------------------------
 
 # Assets paths
 MAP_IMAGE_PATH = r'../Assets/Map/map.png'
@@ -32,16 +36,16 @@ CHARACTER_STATS_FILE_PATH = "../Characters.json"
 
 MAP_WIDTH = 0
 MAP_HEIGHT = 0
+
 # Load images
-# map_image = pygame.image.load(MAP_IMAGE_PATH).convert_alpha()
-player_collision_map = Image.open(PLAYER_COLLISION_MAP_PATH)
-bullet_collision_map = Image.open(BULLET_COLLISION_MAP_PATH)
+PLAYER_COLLISION_MAP = Image.open(PLAYER_COLLISION_MAP_PATH)
+BULLET_COLLISION_MAP = Image.open(BULLET_COLLISION_MAP_PATH)
 
 # player qualities
-player_speed = 4
 CHARACTER_WIDTH = 32
 CHARACTER_HEIGHT = 32
-SHOOTING_CHANCE = 0.05
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 class Character:
@@ -458,9 +462,9 @@ def is_colliding_at(x, y, is_player):
         int_x = int(x)
         int_y = int(y)
         if is_player:
-            pixel_color = player_collision_map.getpixel((int_x, int_y))
+            pixel_color = PLAYER_COLLISION_MAP.getpixel((int_x, int_y))
         else:
-            pixel_color = bullet_collision_map.getpixel((int_x, int_y))
+            pixel_color = BULLET_COLLISION_MAP.getpixel((int_x, int_y))
         alpha = pixel_color[3]
         return not alpha == 0
     except IndexError:

@@ -1,5 +1,13 @@
+"""
+Author: Yoni Reichert
+Program name: client.py
+Description: Display the ninja game and receives updates about the game from the server
+Date: 17-05-2024
+"""
+
 import socket
 import json
+import sys
 import time
 import pygame
 import GameMenu
@@ -17,6 +25,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("client")
 
+# ------------------------------------------------ CONSTANTS ----------------------------------------------------------
+
 SERVER_IP = '127.0.0.1'
 SERVER_PORT = 12345
 
@@ -33,6 +43,8 @@ PLAYER_ID = 'player_id'
 
 UPDATE_DELAY = 0.2
 
+# -------------------------------------------------------------------------------------------------------------------
+
 
 class GameClient:
     def __init__(self, character_name, update_delay, audio) -> None:
@@ -46,12 +58,14 @@ class GameClient:
         self.server_ip = SERVER_IP
         self.server_port = SERVER_PORT
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.client_socket.settimeout(1.0)  # Set timeout to 1 second
         self.running = True
         # the amount of seconds which the client will update the server
         self.update_delay = update_delay
         self.action_queue = Queue()
         self.character_name = character_name
         self.target_positions = {}
+        self.threads = []
 
     def send_character_init(self, character_name) -> None:
         """
@@ -108,8 +122,8 @@ class GameClient:
             else:
                 logger.error(f"Error while validating game update, the game update: {game_update}")
         except socket.timeout as st:
-            logger.error(f"Socket timeout error: {st}")
-        except Exception:
+            pass
+        except socket.error:
             pass
 
     def handle_key_events(self) -> None:
@@ -206,11 +220,17 @@ class GameClient:
         try:
             # All the threads are dependent on the self.running variable
             # constantly get updates from server and push methods into the action queue
-            Thread(target=self.get_server_updates).start()
+
+            get_updates_thread = Thread(target=self.get_server_updates)
+            self.threads.append(get_updates_thread)
+            get_updates_thread.start()
+
             self.send_character_init(self.character_name)
 
             # every 0.2 second send the player's x and y coordinate
-            Thread(target=self.send_player_state).start()
+            send_updates_thread = Thread(target=self.send_player_state)
+            self.threads.append(send_updates_thread)
+            send_updates_thread.start()
 
             # every tick, update the game state according to user input and actions from server
             while self.running:
@@ -226,6 +246,10 @@ class GameClient:
                 pygame.time.Clock().tick(60)
         except Exception as exp:
             logger.error(f"Unhandled exception in start method: {exp}")
+        finally:
+            for thread in self.threads:
+                thread.join()
+                logger.info(f"thread  {thread.name} has stopped!")
 
 
 def validate_json_game_update(game_update):
@@ -271,5 +295,6 @@ if __name__ == "__main__":
         client = GameClient(character, UPDATE_DELAY, settings['sound'] == 'on')
         client.start()
         pygame.quit()
+        sys.exit()
     except Exception as main_loop_exception:
         logger.error(f"Unhandled exception in main loop: {main_loop_exception}")

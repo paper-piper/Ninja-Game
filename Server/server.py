@@ -1,3 +1,10 @@
+"""
+Author: Yoni Reichert
+Program name: server.py
+Description: Connects with clients and initiate them, runs the ninja game logic to broadcast hits actions to all clients
+Date: 17-05-2024
+"""
+
 import socket
 import json
 import pygame
@@ -33,6 +40,8 @@ HIT_PLAYER = 'hit'
 # Action parameters
 ACTION_TYPE = 'type'
 ACTION_PARAMETERS = 'action_parameters'
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 class CommandsServer:
@@ -294,6 +303,7 @@ if __name__ == "__main__":
         ACTION_PARAMETERS: "[50,30]",
     }
     assert validate_json_game_update(valid_message)
+    logger.info("Ignore the next error message, just assertion purpose")
     assert not validate_json_game_update(invalid_message)
     cmd_server = CommandsServer()
     cmd_server.start_server()

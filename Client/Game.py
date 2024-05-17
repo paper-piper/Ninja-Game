@@ -1,3 +1,10 @@
+"""
+Author: Yoni Reichert
+Program name: Game.py
+Description: Runs the ninja game according to the actions received from the client file
+Date: 17-05-2024
+"""
+
 import pygame
 from PIL import Image
 import math
@@ -24,10 +31,12 @@ pil_logger = logging.getLogger('PIL')
 pil_logger.setLevel(logging.WARNING)
 pil_logger.propagate = False
 
+# ------------------------------------------------ CONSTANTS ----------------------------------------------------------
+
 # Set up the display
-screen_width = 800
-screen_height = 600
-SCREEN = pygame.display.set_mode((screen_width, screen_height))
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+SCREEN = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Ninja Game")
 
 # Images paths
@@ -42,17 +51,17 @@ MAP_WIDTH = 0
 MAP_HEIGHT = 0
 
 # Load images
-map_image = pygame.image.load(MAP_IMAGE_PATH).convert_alpha()
-winning_image = pygame.image.load(WINNING_IMAGE_PATH).convert_alpha()
-losing_image = pygame.image.load(LOSING_IMAGE_PATH).convert_alpha()
+MAP_IMAGE = pygame.image.load(MAP_IMAGE_PATH).convert_alpha()
+WINNING_IMAGE = pygame.image.load(WINNING_IMAGE_PATH).convert_alpha()
+LOSING_IMAGE = pygame.image.load(LOSING_IMAGE_PATH).convert_alpha()
 
-player_collision_map = pygame.image.load(PLAYER_COLLISION_MAP_PATH).convert_alpha()
-bullet_collision_map = pygame.image.load(BULLET_COLLISION_MAP_PATH).convert_alpha()
+PLAYER_COLLISION_MAP = pygame.image.load(PLAYER_COLLISION_MAP_PATH).convert_alpha()
+BULLET_COLLISION_MAP = pygame.image.load(BULLET_COLLISION_MAP_PATH).convert_alpha()
 
 # Music paths
 MUSIC_PATH = "../Assets/Music/Game"
-winning_theme_path = "../Assets/Music/Winning_Theme.ogg"
-losing_theme_path = "../Assets/Music/Losing_Theme.ogg"
+WINNING_THEME_PATH = "../Assets/Music/Winning_Theme.ogg"
+LOSING_THEME_PATH = "../Assets/Music/Losing_Theme.ogg"
 # Font paths
 NORMAL_FONT_PATH = r'../Assets/font/NormalFont.ttf'
 FONT = pygame.font.Font(NORMAL_FONT_PATH, 36)  # Set the font for the menu text
@@ -62,17 +71,19 @@ CHARACTER_WIDTH = 32
 CHARACTER_HEIGHT = 32
 
 # GUI paths
-hearts_file_path = r"../Assets/GUI/Hearts.png"
-heart_width = 16
-heart_height = 13
+HEARTS_FILE_PATH = r"../Assets/GUI/Hearts.png"
+HEART_WIDTH = 16
+HEART_HEIGHT = 13
 
 # Load music and sounds effects
 UPDATE_MUSIC_DELAY = 1000  # in milliseconds, a second
 pygame.mixer.init()
-hit_sound_path = r"../Assets/SoundEffects/Game/Hit.wav"
-kill_sound_path = r"../Assets/SoundEffects/Game/Kill.wav"
-hit_sound = pygame.mixer.Sound(hit_sound_path)
-kill_sound = pygame.mixer.Sound(kill_sound_path)
+HIT_SOUND_PATH = r"../Assets/SoundEffects/Game/Hit.wav"
+KILL_SOUND_PATH = r"../Assets/SoundEffects/Game/Kill.wav"
+HIT_SOUND = pygame.mixer.Sound(HIT_SOUND_PATH)
+KILL_SOUND = pygame.mixer.Sound(KILL_SOUND_PATH)
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 class Camera:
@@ -82,7 +93,7 @@ class Camera:
         :param width: Width of the camera view
         :param height: Height of the camera view
         """
-        self.camera = pygame.Rect(0, 0, screen_width, screen_height)
+        self.camera = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
         self.width = width
         self.height = height
         self.speed = 5  # Camera movement speed
@@ -103,26 +114,25 @@ class Camera:
         if direction == 'left':
             self.camera.x = max(self.camera.x - self.speed, 0)
         elif direction == 'right':
-            self.camera.x = min(self.camera.x + self.speed, self.width - screen_width)
+            self.camera.x = min(self.camera.x + self.speed, self.width - SCREEN_WIDTH)
         if direction == 'up':
             self.camera.y = max(self.camera.y - self.speed, 0)
         elif direction == 'down':
-            self.camera.y = min(self.camera.y + self.speed, self.height - screen_height)
+            self.camera.y = min(self.camera.y + self.speed, self.height - SCREEN_HEIGHT)
 
     def follow_target(self, target):
         """
         Make the camera follow the target entity.
         :param target: The target entity that the camera should follow
         """
-        # FIXME the x and y calculation is reversed twice. working, but weird
-        x = -target.rect.x + int(screen_width / 2)
-        y = -target.rect.y + int(screen_height / 2)
+        x = -target.rect.x + int(SCREEN_WIDTH / 2)
+        y = -target.rect.y + int(SCREEN_HEIGHT / 2)
 
         # limit scrolling to map size
         x = min(0, x)  # left
         y = min(0, y)  # top
-        x = max(-(self.width - screen_width), x)  # right
-        y = max(-(self.height - screen_height), y)  # bottom
+        x = max(-(self.width - SCREEN_WIDTH), x)  # right
+        y = max(-(self.height - SCREEN_HEIGHT), y)  # bottom
 
         self.camera = pygame.Rect(-x, -y, self.width, self.height)
 
@@ -308,10 +318,10 @@ class Player:
         if self.hp <= 0:
             # Handle player death here if needed
             self.dead = True
-            kill_sound.play()
+            KILL_SOUND.play()
             self.hp = 0
         else:
-            hit_sound.play()
+            HIT_SOUND.play()
 
 
 class Bullet:
@@ -418,7 +428,7 @@ class Game:
                 pygame.mixer.music.set_volume(0)
             global MAP_WIDTH, MAP_HEIGHT
             MAP_WIDTH, MAP_HEIGHT = get_image_dimensions(MAP_IMAGE_PATH)
-            self.screen = pygame.display.set_mode((screen_width, screen_height))
+            self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
             self.map_width, self.map_height = MAP_WIDTH, MAP_HEIGHT
             self.camera = Camera(self.map_width, self.map_height)
             self.players = {}
@@ -434,18 +444,19 @@ class Game:
     def game_over(self, win):
         """
         Display the game over screen based on the game result.
+        :param win: did the player won or lost
         """
         # Indicate that game over music is playing
         self.game_over_music_playing = True
 
         # Play game over music
         if win:
-            pygame.mixer.music.load(winning_theme_path)
+            pygame.mixer.music.load(WINNING_THEME_PATH)
         else:
-            pygame.mixer.music.load(losing_theme_path)
+            pygame.mixer.music.load(LOSING_THEME_PATH)
         pygame.mixer.music.play()
         # Select the appropriate image based on the win parameter
-        image = winning_image if win else losing_image
+        image = WINNING_IMAGE if win else LOSING_IMAGE
 
         # Position the image at the top center of the screen
         # Assuming the screen's size is 800x600 as mentioned
@@ -497,17 +508,17 @@ class Game:
         Draw the player's health interface on the game screen.
         :return: None
         """
-        hearts_surface = pygame.image.load(hearts_file_path)
+        hearts_surface = pygame.image.load(HEARTS_FILE_PATH)
         scale_factor = 3
 
         # Scale dimensions
-        scaled_heart_width = heart_width * scale_factor
-        scaled_heart_height = heart_height * scale_factor
+        scaled_heart_width = HEART_WIDTH * scale_factor
+        scaled_heart_height = HEART_HEIGHT * scale_factor
 
         # Scale the image surface
         hearts_surface = pygame.transform.scale(
             hearts_surface,
-            (heart_width * 5 * scale_factor, heart_height * scale_factor))
+            (HEART_WIDTH * 5 * scale_factor, HEART_HEIGHT * scale_factor))
 
         # Calculate number of hearts to display
         num_full_hearts = self.player.hp // 4
@@ -637,7 +648,7 @@ class Game:
             self.screen.fill((255, 255, 255))
             map_offset_x = -self.camera.camera.x
             map_offset_y = -self.camera.camera.y
-            self.screen.blit(map_image, (map_offset_x, map_offset_y))
+            self.screen.blit(MAP_IMAGE, (map_offset_x, map_offset_y))
             # First, draw all dead players
             for player in self.players.values():
                 if player.dead:  # Check if the player is dead
@@ -692,28 +703,31 @@ class Game:
         :return: None
         """
         # Fetch all .wav files from the specified directory
-        music_files = [file for file in os.listdir(MUSIC_PATH) if file.endswith('.ogg')]
-        if not music_files:
-            print("No music files found in the directory.")
-            return
+        try:
+            music_files = [file for file in os.listdir(MUSIC_PATH) if file.endswith('.ogg')]
+            if not music_files:
+                print("No music files found in the directory.")
+                return
 
-        # Function to play a selected music file
-        def play_music():
-            # Randomly select a music file
-            selected_file = random.choice(music_files)
-            full_path = os.path.join(MUSIC_PATH, selected_file)
+            # Function to play a selected music file
+            def play_music():
+                # Randomly select a music file
+                selected_file = random.choice(music_files)
+                full_path = os.path.join(MUSIC_PATH, selected_file)
 
-            # Load and play the selected music file
-            pygame.mixer.music.load(full_path)
-            pygame.mixer.music.play()
+                # Load and play the selected music file
+                pygame.mixer.music.load(full_path)
+                pygame.mixer.music.play()
 
-        # Continue playing music
-        while not self.stop_music:
-            if not self.game_over_music_playing:  # Only play random music if not in game over state
-                if not pygame.mixer.music.get_busy():
-                    play_music()
-            pygame.time.wait(UPDATE_MUSIC_DELAY)
-        pygame.mixer.music.stop()
+            # Continue playing music
+            while not self.stop_music:
+                if not self.game_over_music_playing:  # Only play random music if not in game over state
+                    if not pygame.mixer.music.get_busy():
+                        play_music()
+                pygame.time.wait(UPDATE_MUSIC_DELAY)
+            pygame.mixer.music.stop()
+        except pygame.error as pe:
+            pass
 
     @staticmethod
     def load_character_from_json(name):
@@ -797,8 +811,8 @@ def is_colliding_at(x, y, is_player):
     int_x = int(x)
     int_y = int(y)
     if is_player:
-        pixel_color = player_collision_map.get_at((int_x, int_y))
+        pixel_color = PLAYER_COLLISION_MAP.get_at((int_x, int_y))
     else:
-        pixel_color = bullet_collision_map.get_at((int_x, int_y))
+        pixel_color = BULLET_COLLISION_MAP.get_at((int_x, int_y))
     alpha = pixel_color[3]
     return not alpha == 0

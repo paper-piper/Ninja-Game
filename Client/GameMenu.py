@@ -1,3 +1,10 @@
+"""
+Author: Yoni Reichert
+Program name: GameMenu.py
+Description: Runs the game menu and returns the settings parameters
+Date: 17-05-2024
+"""
+
 import pygame
 import sys
 import os
@@ -6,26 +13,31 @@ import threading
 
 pygame.init()
 pygame.mixer.init()
+
+# ------------------------------------------------ CONSTANTS ----------------------------------------------------------
+
 MAIN_MENU_IMAGE_PATH = r'../Assets/Map/MainMenuBg.png'
 
 # Music paths
-music_path = "../Assets/Music/Menu"
-stop_music = False
+MUSIC_PATH = "../Assets/Music/Menu"
+STOP_MUSIC = False
 
 # Sound effects
-accept_sound_path = '../Assets/SoundEffects/Menu/Accept.wav'
-accept2_sound_path = '../Assets/SoundEffects/Menu/Accept2.wav'
-cancel_sound_path = '../Assets/SoundEffects/Menu/Cancel.wav'
-accept_sound = pygame.mixer.Sound(accept_sound_path)
-accept2_sound = pygame.mixer.Sound(accept2_sound_path)
-cancel_sound = pygame.mixer.Sound(cancel_sound_path)
+ACCEPT_SOUND_PATH = '../Assets/SoundEffects/Menu/Accept.wav'
+ACCEPT2_SOUND_PATH = '../Assets/SoundEffects/Menu/Accept2.wav'
+CANCEL_SOUND_PATH = '../Assets/SoundEffects/Menu/Cancel.wav'
+ACCEPT_SOUND = pygame.mixer.Sound(ACCEPT_SOUND_PATH)
+ACCEPT2_SOUND = pygame.mixer.Sound(ACCEPT2_SOUND_PATH)
+CANCEL_SOUND = pygame.mixer.Sound(CANCEL_SOUND_PATH)
 
 # Font paths
 NORMAL_FONT_PATH = r'../Assets/font/NormalFont.ttf'
 FONT = pygame.font.Font(NORMAL_FONT_PATH, 36)  # Set the font for the menu text
 
-screen_width = 800
-screen_height = 600
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 class Menu:
@@ -34,7 +46,7 @@ class Menu:
         Initialize the main menu with screen settings, fonts, background image, and music settings.
         :return: None
         """
-        self.screen = pygame.display.set_mode((screen_width, screen_height))
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.font = FONT
         self.title_font = pygame.font.Font(NORMAL_FONT_PATH, 48)  # Larger font for the title
         self.bg_image = pygame.image.load(MAIN_MENU_IMAGE_PATH)
@@ -57,7 +69,7 @@ class Menu:
         Run the main loop of the menu, handling user interactions and updating the display.
         :return: Tuple containing the final settings and the selected character when the menu closes
         """
-        global stop_music
+        global STOP_MUSIC
         running = True
         while running:
             self.screen.blit(self.bg_image, (0, 0))
@@ -87,7 +99,7 @@ class Menu:
                             if rect.collidepoint(event.pos):
                                 running = self.handle_selection(i)
         # pygame.mixer.music.stop()
-        stop_music = True
+        STOP_MUSIC = True
         return self.settings, self.character
 
     def get_items(self, menu_type):
@@ -136,19 +148,19 @@ class Menu:
             selection = self.items[index]
             if selection == 'Start Game':
                 # create character select and then return
-                accept2_sound.play()
+                ACCEPT2_SOUND.play()
                 character_select = CharacterSelectMenu(self.screen)
                 self.character = character_select.run()
                 return False  # Exit menu when starting the game
             elif selection == 'Settings':
-                accept2_sound.play()
+                ACCEPT2_SOUND.play()
                 self.current_menu = 'Settings'  # Switch to settings menu
                 self.update_menu_items()
             elif selection == 'Exit':
                 pygame.quit()
                 sys.exit()
         elif self.current_menu == 'Settings':
-            accept2_sound.play()
+            ACCEPT2_SOUND.play()
             selection = self.items[index]
             if selection == 'Back to Main Menu':
                 self.current_menu = 'Main Menu'  # Switch back to main menu
@@ -182,7 +194,7 @@ class CharacterSelectMenu:
         self.bg_image = pygame.image.load(MAIN_MENU_IMAGE_PATH)
         self.title = "Select Character"
         self.title_surface = self.title_font.render(self.title, True, (255, 255, 255))
-        self.title_rect = self.title_surface.get_rect(center=(screen_width // 2, 30))
+        self.title_rect = self.title_surface.get_rect(center=(SCREEN_WIDTH // 2, 30))
 
         # Setup character grid
         self.characters = self.get_characters()  # This function needs to be defined to load character info
@@ -282,7 +294,7 @@ class CharacterSelectMenu:
                     if event.button == 1:  # Left mouse click
                         for character, card_rect in self.cards:
                             if card_rect.collidepoint(event.pos):
-                                accept_sound.play()
+                                ACCEPT_SOUND.play()
                                 return character['name']  # Return selected character name and exit
 
         return None
@@ -294,7 +306,7 @@ def play_random_music():
     :return: None
     """
     # Fetch all .wav files from the specified directory
-    music_files = [file for file in os.listdir(music_path) if file.endswith('.ogg')]
+    music_files = [file for file in os.listdir(MUSIC_PATH) if file.endswith('.ogg')]
     if not music_files:
         print("No music files found in the directory.")
         return
@@ -303,7 +315,7 @@ def play_random_music():
     def play_music():
         # Randomly select a music file
         selected_file = random.choice(music_files)
-        full_path = os.path.join(music_path, selected_file)
+        full_path = os.path.join(MUSIC_PATH, selected_file)
 
         # Load and play the selected music file
         pygame.mixer.music.load(full_path)
@@ -314,7 +326,7 @@ def play_random_music():
     play_music()
 
     # Continue playing music
-    while not stop_music:
+    while not STOP_MUSIC:
         # Check if music is still playing
         if not pygame.mixer.music.get_busy():
             # If the song has ended, play the next song
