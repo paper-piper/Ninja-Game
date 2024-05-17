@@ -105,7 +105,7 @@ class GameClient:
             message_str = json.dumps(message)
             message_length = len(message_str)
             full_message = str(message_length) + MESSAGE_DIVIDER + message_str
-            self.client_socket.sendto(message_str.encode(), (self.server_ip, self.server_port))
+            self.client_socket.sendto(full_message.encode(), (self.server_ip, self.server_port))
         except socket.error as e:
             logger.error(f"Socket error during message sending: {e}")
         except json.JSONEncoder as e:

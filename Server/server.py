@@ -108,8 +108,8 @@ class CommandsServer:
         """
         while self.running:
             try:
-                message, client_address = self.server_socket.recvfrom(1024)
-                game_update = json.loads(message.decode())
+                message, client_address = self.receive_message_from_client()
+                game_update = json.loads(message)
                 if validate_json_game_update(game_update):
                     client_id = next((k for k, v in self.clients.items() if v == client_address), None)
                     if not client_id:
@@ -125,7 +125,39 @@ class CommandsServer:
                 logger.info(f"Having connection reset error as: {cr}, trying again")
 
     def receive_message_from_client(self):
+        data, client_address = self.server_socket.recvfrom(1024)  # Adjust buffer size as needed
+        data = data.decode()
+
+        # Initialize variables to parse the message
+        length_str = ""
+        index = 0
+
+        # Read the length of the message
+        while index < len(data):
+            char = data[index]
+            if char.isdigit():
+                length_str += char
+                index += 1
+            elif char == '!':
+                index += 1
+                break
+            else:
+                logger.error(f"Invalid char while reading message length: {char}")
+                return None
+
+        # Convert the length string to an integer
+        length = int(length_str)
+
+        # Read the message content of the specified length
+        message = data[index:index + length]
+
+        # Check if the message length matches the specified length
+        if len(message) != length:
+            logger.error(f"Message length mismatch. Expected {length}, got {len(message)}")
+            return
         pass
+        return message, client_address
+
     def check_for_game_over(self):
         """
         check if the game is over, is handle is_player_alive
