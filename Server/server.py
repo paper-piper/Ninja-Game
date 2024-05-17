@@ -41,6 +41,7 @@ HIT_PLAYER = 'hit'
 ACTION_TYPE = 'type'
 ACTION_PARAMETERS = 'action_parameters'
 
+MESSAGE_DIVIDER = '!'
 # ----------------------------------------------------------------------------------------------------------------------
 
 
@@ -123,6 +124,8 @@ class CommandsServer:
             except ConnectionResetError as cr:
                 logger.info(f"Having connection reset error as: {cr}, trying again")
 
+    def receive_message_from_client(self):
+        pass
     def check_for_game_over(self):
         """
         check if the game is over, is handle is_player_alive
@@ -270,8 +273,10 @@ class CommandsServer:
         :param client_address: the socket address of the client
         :param message: the message data to be sent, in JSON format
         """
-        message_json = json.dumps(message)
-        self.server_socket.sendto(message_json.encode(), client_address)
+        message_str = json.dumps(message)
+        message_length = len(message_str)
+        full_message = str(message_length) + MESSAGE_DIVIDER + message_str
+        self.server_socket.sendto(full_message.encode(), client_address)
 
 
 def validate_json_game_update(game_update):

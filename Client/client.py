@@ -43,6 +43,8 @@ PLAYER_ID = 'player_id'
 
 UPDATE_DELAY = 0.2
 
+MESSAGE_DIVIDER = '!'
+
 # -------------------------------------------------------------------------------------------------------------------
 
 
@@ -102,9 +104,8 @@ class GameClient:
         try:
             message_str = json.dumps(message)
             message_length = len(message_str)
-            full_message = str(message_length) + message_str
+            full_message = str(message_length) + MESSAGE_DIVIDER + message_str
             self.client_socket.sendto(message_str.encode(), (self.server_ip, self.server_port))
-            # logger.info(f"Sent message: {message}")
         except socket.error as e:
             logger.error(f"Socket error during message sending: {e}")
         except json.JSONEncoder as e:
@@ -115,15 +116,45 @@ class GameClient:
         Receive and process the updated game state from the server.
         """
         try:
-            message, _ = self.client_socket.recvfrom(1024)
-            game_update = json.loads(message.decode())
+            # Read the entire datagram
+            data, _ = self.client_socket.recvfrom(1024)  # Adjust buffer size as needed
+            data = data.decode()
+
+            # Initialize variables to parse the message
+            length_str = ""
+            index = 0
+
+            # Read the length of the message
+            while index < len(data):
+                char = data[index]
+                if char.isdigit():
+                    length_str += char
+                    index += 1
+                elif char == '!':
+                    index += 1
+                    break
+                else:
+                    logger.error(f"Invalid char while reading message length: {char}")
+                    return None
+
+            # Convert the length string to an integer
+            length = int(length_str)
+
+            # Read the message content of the specified length
+            message = data[index:index + length]
+
+            # Check if the message length matches the specified length
+            if len(message) != length:
+                logger.error(f"Message length mismatch. Expected {length}, got {len(message)}")
+                return
+            game_update = json.loads(message)
             if validate_json_game_update(game_update):
                 self.action_queue.put(game_update)
             else:
                 logger.error(f"Error while validating game update, the game update: {game_update}")
         except socket.timeout as st:
             pass
-        except socket.error:
+        except socket.error as se:
             pass
 
     def handle_key_events(self) -> None:
@@ -195,8 +226,8 @@ class GameClient:
                 elif action_type == HIT_PLAYER:
                     self.game.players[player_id].take_damage(action_params[0])
                     print(f"He was shot! {action_params}")
-        except KeyError as keyrr:
-            logger.error(f"Key error processing action queue: {keyrr}")
+        except KeyError as key_error:
+            logger.error(f"Key error processing action queue: {key_error}")
 
     def send_player_state(self):
         """
