@@ -14,7 +14,6 @@ Welcome to **Ninja Game**, a retro pixel art, 2D top-down game where strategy an
 - **Pick Your Ninja:** Choose from a variety of characters, each with unique stats and skills.
 - **Battle Other Players:** Engage in strategic battles in a top-down 2D arena.
 - **Retro Pixel Art Style:** Immerse yourself in a beautifully crafted pixel art world.
-- **Competitive Gameplay:** Fight your way up the leaderboard and prove your skills.
 
 ## Game Protocol
 
